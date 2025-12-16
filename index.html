@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHL Blend Workflow Build Guide | All Western Mortgage</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --primary-light: #34495e;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --success: #27ae60;
+            --success-light: #2ecc71;
+            --success-bg: rgba(39, 174, 96, 0.15);
+            --warning: #f39c12;
+            --warning-light: #e67e22;
+            --warning-bg: rgba(243, 156, 18, 0.15);
+            --danger: #e74c3c;
+            --bg: #ecf0f1;
+            --bg-light: #d5dbdb;
+            --card-bg: #ffffff;
+            --card-bg-alt: #f8f9fa;
+            --text: #2c3e50;
+            --text-secondary: #34495e;
+            --text-muted: #7f8c8d;
+            --border: #bdc3c7;
+            --border-light: #ecf0f1;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 15px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 3rem 2.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .header h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .header .meta {
+            opacity: 0.85;
+            font-size: 0.9375rem;
+            line-height: 1.7;
+            font-weight: 400;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
+        }
+
+        /* Tabs */
+        .tabs-container {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: var(--card-bg);
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tabs-nav::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .tabs-nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tabs-nav::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .tab-button {
+            padding: 1rem 1.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+            position: relative;
+            font-family: inherit;
+        }
+
+        .tab-button:hover {
+            color: var(--text);
+            background: var(--bg-light);
+        }
+
+        .tab-button.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: var(--card-bg);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--border-light);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 1.25rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 999px;
+        }
+
+        /* Section styling removed - using tabs now */
+
+        /* Checklist Items */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist-item {
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.5rem;
+            background: var(--card-bg);
+            border-radius: 6px;
+            border-left: 3px solid var(--border);
+            border: 1px solid var(--border-light);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .checklist-item:hover {
+            border-left-color: var(--accent);
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+            background: var(--card-bg-alt);
+        }
+
+        .checklist-item.completed {
+            background: var(--success-bg);
+            border-left-color: var(--success);
+            border-color: var(--success);
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            margin-top: 3px;
+            flex-shrink: 0;
+            accent-color: var(--accent);
+        }
+
+        .checklist-item-content {
+            flex: 1;
+        }
+
+        .checklist-item-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+
+        .checklist-item.completed .checklist-item-title {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        .checklist-item-description {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.6;
+        }
+
+        /* Workflow Card */
+        .workflow-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 0;
+            margin-bottom: 1.25rem;
+            border: 2px solid var(--border);
+            transition: all 0.2s ease;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .workflow-card:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-md);
+        }
+
+        .workflow-card.completed {
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .workflow-header {
+            display: flex;
+            align-items: start;
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border-light);
+            gap: 1rem;
+            background: var(--card-bg);
+        }
+
+        .workflow-header:hover {
+            background: var(--card-bg-alt);
+        }
+
+        .workflow-header-left {
+            display: flex;
+            align-items: start;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .workflow-header-content {
+            flex: 1;
+        }
+
+        .workflow-card.collapsed .workflow-header {
+            border-bottom: none;
+        }
+
+        .workflow-card-content {
+            padding: 1.5rem;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+            max-height: 10000px;
+            opacity: 1;
+            background: var(--card-bg-alt);
+        }
+
+        .workflow-card.collapsed .workflow-card-content {
+            max-height: 0;
+            opacity: 0;
+            padding: 0 1.5rem;
+            margin: 0;
+        }
+
+        .workflow-header-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-top: 3px;
+            flex-shrink: 0;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .workflow-header::after {
+            content: '▼';
+            font-size: 0.875rem;
+            color: var(--accent);
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
+        .workflow-card.collapsed .workflow-header::after {
+            transform: rotate(-90deg);
+        }
+
+        .workflow-id {
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+        }
+
+        .workflow-title {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+            color: var(--text);
+            letter-spacing: -0.01em;
+            line-height: 1.5;
+        }
+
+        .workflow-section {
+            margin-top: 1.75rem;
+        }
+
+        .workflow-section.collapsed .workflow-section-content-wrapper {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            overflow: hidden;
+        }
+
+        .workflow-section-title {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1rem;
+            font-size: 0.9375rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            padding: 0.875rem 1.25rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .workflow-section-title:hover {
+            background: var(--bg-light);
+            border-color: var(--accent);
+            box-shadow: var(--shadow);
+        }
+
+        .workflow-section-title::after {
+            content: '▼';
+            font-size: 0.875rem;
+            color: var(--accent);
+            transition: transform 0.3s ease;
+            font-weight: bold;
+        }
+
+        .workflow-section.collapsed .workflow-section-title::after {
+            transform: rotate(-90deg);
+        }
+
+        /* Nested sections - indented and visually distinct */
+        .workflow-section .workflow-section {
+            margin-left: 2rem;
+            margin-top: 1rem;
+        }
+
+        .workflow-section .workflow-section-title {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 0.625rem 1rem;
+            background: var(--card-bg-alt);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--success);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .workflow-section .workflow-section-title:hover {
+            background: var(--bg-light);
+            border-color: var(--success);
+        }
+
+        .workflow-section-title.no-collapse {
+            cursor: default;
+            padding: 0.75rem 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+        }
+
+        .workflow-section-title.no-collapse:hover {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+        .workflow-section-title.no-collapse::after {
+            display: none;
+        }
+
+        .workflow-section-content-wrapper {
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.2s ease;
+            max-height: 5000px;
+            opacity: 1;
+        }
+
+        .workflow-section.collapsed .workflow-section-content-wrapper {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .workflow-section-content {
+            background: var(--card-bg-alt);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+            border: 1px solid var(--border-light);
+            margin-top: 1rem;
+            font-weight: normal;
+            font-size: 0.9375rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .workflow-steps {
+            list-style: decimal;
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .workflow-steps li {
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .tab-button .badge {
+            background: var(--bg-light);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.625rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+            border-radius: 12px;
+        }
+
+        .tab-button.active .badge {
+            background: var(--accent);
+            color: white;
+        }
+
+        .badge-optional {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-required {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Field/Tag Lists */
+        .field-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .field-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .field-type {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Button */
+        button {
+            padding: 0.625rem 1.25rem;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #dc2626;
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Mermaid Diagram Container */
+        .diagram-container {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .diagram-container .mermaid {
+            display: flex;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        /* Test Cases */
+        .test-case {
+            background: var(--card-bg);
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--warning);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .test-case-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text);
+            font-size: 1.0625rem;
+        }
+
+        .test-case-steps {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 1rem;
+        }
+
+        .test-case-steps li {
+            margin-bottom: 0.625rem;
+            padding-left: 1.75rem;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .test-case-steps li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.125rem;
+        }
+
+        /* Gotchas */
+        .gotcha-item {
+            background: var(--warning-bg);
+            border-left: 4px solid var(--warning);
+            border: 1px solid var(--warning);
+            border-left-width: 4px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .field-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Utility Classes */
+        .mt-1 { margin-top: 1rem; }
+        .mt-2 { margin-top: 2rem; }
+        .mb-1 { margin-bottom: 1rem; }
+        .mb-2 { margin-bottom: 2rem; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 GHL Blend Workflow Build Guide</h1>
+            <div class="meta">
+                <strong>Client:</strong> Jason Young / All Western Mortgage<br>
+                <strong>Purpose:</strong> Blend Pre-App → Claim → LO Gate → Post-App Automation System<br>
+                <strong>Document Date:</strong> 2025-12-16
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Overall Progress</strong>
+                    <div id="progress-text" style="font-size: 0.9375rem; color: var(--text-secondary); font-weight: 500;">0% Complete</div>
+                </div>
+                <button onclick="resetProgress()">Reset Progress</button>
+            </div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Tabs Container -->
+        <div class="tabs-container">
+            <div class="tabs-nav">
+                <button class="tab-button active" onclick="switchTab('overview', this)">📋 Overview</button>
+                <button class="tab-button" onclick="switchTab('setup', this)">⚙️ Setup <span class="badge" id="setup-badge" style="margin-left: 0.5rem;">0/4</span></button>
+                <button class="tab-button" onclick="switchTab('claim', this)">📄 Claim Page <span class="badge" id="claim-badge" style="margin-left: 0.5rem;">0/3</span></button>
+                <button class="tab-button" onclick="switchTab('workflows', this)">🔄 Workflows <span class="badge" id="workflow-badge" style="margin-left: 0.5rem;">0/12</span></button>
+                <button class="tab-button" onclick="switchTab('implementation', this)">📅 Implementation</button>
+                <button class="tab-button" onclick="switchTab('tests', this)">🧪 Tests <span class="badge" id="test-badge" style="margin-left: 0.5rem;">0/7</span></button>
+                <button class="tab-button" onclick="switchTab('open-items', this)">❓ Open Items</button>
+                <button class="tab-button" onclick="switchTab('gotchas', this)">⚠️ Gotchas <span class="badge" id="gotcha-badge" style="margin-left: 0.5rem;">0/7</span></button>
+            </div>
+
+            <!-- Tab: Overview -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="workflow-section collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">Business Outcomes</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="workflow-section-content">
+                            <ul style="list-style: none; padding-left: 0;">
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Single Claim URL</strong> - All LOs use one link to claim leads</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Lead Context</strong> - LOs see name/city/loan amount before claiming</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>First Claim Wins</strong> - Deterministic claim assignment</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Blend Monitoring</strong> - Checks every 5 minutes for SSN/DOB or inactivity</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>LO Accountability</strong> - 30-minute SLA gate with auto-reassignment</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Special Routing</strong> - Spanish, DNC, and loan amount handling</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-section mt-2 collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">High-Level Architecture</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="diagram-container" style="margin-top: 1rem;">
+                            <div class="mermaid">flowchart TD
+A[Blend User Created App Started Event] --> B[WF-BLEND-01 Ingest Initial SMS]
+B --> C[WF-BLEND-02 Monitoring Loop 5 min]
+C -->|SSN DOB entered| D[WF-CLAIM-01 Application Blast]
+C -->|Inactive 45m| E[WF-BLEND-03 Inactivity Call Blast]
+D --> F[Claim Page FORM-LO-CLAIM]
+F --> G[WF-CLAIM-02 Claim Processor]
+G -->|Award| H[Move to Assigned Pipeline Start Gate]
+H --> I[WF-GATE-01 30m LO First-Touch Gate]
+I -->|No touch| D
+I -->|Touched| J[Normal LO Work Post-App when ready]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Setup -->
+            <div id="tab-setup" class="tab-content">
+                <!-- Custom Fields -->
+                <div class="workflow-section collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.1 Create Contact Custom Fields</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="checklist" id="fields-checklist" style="margin-top: 1rem;">
+                            <!-- Fields will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tags -->
+                <div class="workflow-section mt-2 collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.2 Create Tags</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="checklist" id="tags-checklist" style="margin-top: 1rem;">
+                            <!-- Tags will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Setup -->
+                <div class="workflow-section mt-2 collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.3 Configure LO Team</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="checklist-item" data-id="team-setup" style="margin-top: 1rem;">
+                            <input type="checkbox" id="team-setup-cb" onchange="updateProgress()">
+                            <div class="checklist-item-content">
+                                <div class="checklist-item-title">Create "Loan Officers" Team</div>
+                                <div class="checklist-item-description">
+                                    <strong>Path:</strong> Settings → My Staff → Teams → + Create Team<br>
+                                    Add all LO users and confirm each has mobile number and correct permissions
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opportunity Ownership -->
+                <div class="workflow-section mt-2 collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.4 Confirm Opportunity Ownership</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="checklist-item" data-id="opp-ownership" style="margin-top: 1rem;">
+                            <input type="checkbox" id="opp-ownership-cb" onchange="updateProgress()">
+                            <div class="checklist-item-content">
+                                <div class="checklist-item-title">Standardize Ownership Rules</div>
+                                <div class="checklist-item-description">
+                                    Contact owner = LO user who claimed<br>
+                                    Opportunity owner = same LO user<br>
+                                    Pipeline changes must be explicit in workflows
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Claim Page -->
+            <div id="tab-claim" class="tab-content">
+                <div class="checklist" id="claim-checklist">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Workflows -->
+            <div id="tab-workflows" class="tab-content">
+                <div id="workflows-container">
+                    <!-- Workflows will be populated by JS -->
+                </div>
+                
+                <!-- Visual Workflow Maps -->
+                <div class="workflow-section mt-2 collapsed">
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">Visual Workflow Maps (Subsystems)</div>
+                    <div class="workflow-section-content-wrapper">
+                        <div class="diagram-container" style="margin-top: 1rem;">
+                        <div class="workflow-section-title" style="margin-bottom: 1rem;">Claim Subsystem</div>
+                        <div class="mermaid">flowchart TD
+A[WF-CLAIM-01 Blast] --> B[Claim Page Form]
+B --> C[WF-CLAIM-02 Claim Processor]
+C -->|Already claimed| D[Notify LO Denied]
+C -->|Award| E[Assign Contact Opp]
+E --> F[WF-GATE-01 30m SLA Gate]
+F -->|Touched| G[End]
+F -->|No touch| H[Exclude LO Reblast]
+H --> A</div>
+                    </div>
+                    
+                    <div class="diagram-container">
+                        <div class="workflow-section-title" style="margin-bottom: 1rem;">Blend Monitoring Subsystem</div>
+                        <div class="mermaid">flowchart TD
+A[WF-BLEND-01 Ingest] --> B[WF-BLEND-02 Monitor Loop]
+B -->|SSN DOB| C[WF-CLAIM-01 Blast]
+B -->|Inactive 45m| D[WF-BLEND-03 Call Blast]
+D --> E[Fallback SMS Revival Pool]</div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Implementation -->
+            <div id="tab-implementation" class="tab-content">
+                <div class="checklist" id="implementation-checklist">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Tests -->
+            <div id="tab-tests" class="tab-content">
+                <div id="tests-container">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Open Items -->
+            <div id="tab-open-items" class="tab-content">
+                <div class="workflow-section-content">
+                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">These are configuration-dependent in GHL and should be decided once during implementation:</p>
+                    <ol style="padding-left: 1.5rem;">
+                        <li style="margin-bottom: 1rem;">
+                            <strong>Re-assigned deals pipeline location:</strong><br>
+                            Do you want re-assigned deals to move back into <strong>Unassigned</strong> pipeline, or stay in <strong>Assigned</strong> pipeline "Retargeted…"?
+                        </li>
+                        <li style="margin-bottom: 1rem;">
+                            <strong>What counts as "LO engaged":</strong><br>
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Completion of SLA task?</li>
+                                <li>Outbound SMS logged?</li>
+                                <li>Transcript generated?</li>
+                            </ul>
+                            <em style="color: var(--text-secondary);">(This spec supports all; pick one primary.)</em>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Tab: Gotchas -->
+            <div id="tab-gotchas" class="tab-content">
+                <div id="gotchas-container">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            securityLevel: 'loose',
+            suppressErrors: true,
+            themeVariables: {
+                primaryColor: '#ecf0f1',
+                primaryTextColor: '#2c3e50',
+                primaryBorderColor: '#bdc3c7',
+                lineColor: '#34495e',
+                secondaryColor: '#f8f9fa',
+                tertiaryColor: '#ffffff',
+                background: '#ffffff',
+                mainBkg: '#ffffff',
+                secondBkg: '#f8f9fa',
+                textColor: '#2c3e50',
+                border1: '#bdc3c7',
+                border2: '#ecf0f1',
+                arrowheadColor: '#3498db',
+                clusterBkg: '#f8f9fa',
+                clusterBorder: '#bdc3c7',
+                defaultLinkColor: '#34495e',
+                titleColor: '#2c3e50',
+                edgeLabelBackground: '#ffffff',
+                actorBorder: '#3498db',
+                actorBkg: '#ecf0f1',
+                actorTextColor: '#2c3e50',
+                actorLineColor: '#34495e',
+                signalColor: '#2c3e50',
+                signalTextColor: '#2c3e50',
+                labelBoxBkgColor: '#ffffff',
+                labelBoxBorderColor: '#bdc3c7',
+                labelTextColor: '#2c3e50',
+                loopTextColor: '#2c3e50',
+                noteBorderColor: '#bdc3c7',
+                noteBkgColor: '#f8f9fa',
+                noteTextColor: '#2c3e50',
+                activationBorderColor: '#3498db',
+                activationBkgColor: '#ecf0f1',
+                sequenceNumberColor: '#ffffff'
+            }
+        });
+    </script>
+</body>
+</html>
+
