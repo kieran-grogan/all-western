@@ -860,6 +860,7 @@ function loadSavedCheckboxStates() {
 function initializeChecklists() {
     // Custom Fields
     const fieldsChecklist = document.getElementById('fields-checklist');
+    if (fieldsChecklist) fieldsChecklist.innerHTML = '';
     let fieldIndex = 0;
 
     Object.keys(customFields).forEach(key => {
@@ -918,6 +919,7 @@ function initializeChecklists() {
 
     // Tags
     const tagsChecklist = document.getElementById('tags-checklist');
+    if (tagsChecklist) tagsChecklist.innerHTML = '';
     tags.forEach(tag => {
         const item = document.createElement('div');
         item.className = 'checklist-item';
@@ -949,6 +951,7 @@ function initializeChecklists() {
 
     // Claim Page Steps
     const claimChecklist = document.getElementById('claim-checklist');
+    if (claimChecklist) claimChecklist.innerHTML = '';
     claimPageSteps.forEach(step => {
         const item = document.createElement('div');
         item.className = 'checklist-item';
@@ -986,6 +989,7 @@ function initializeChecklists() {
 
 function initializeWorkflows() {
     const container = document.getElementById('workflows-container');
+    if (container) container.innerHTML = '';
 
     Object.keys(workflows).forEach((key, index) => {
         const category = workflows[key];
@@ -1193,6 +1197,7 @@ function initializeWorkflows() {
 
 function initializeImplementationOrder() {
     const container = document.getElementById('implementation-checklist');
+    if (container) container.innerHTML = '';
 
     implementationOrder.forEach(item => {
         const div = document.createElement('div');
@@ -1231,6 +1236,7 @@ function initializeImplementationOrder() {
 
 function initializeTests() {
     const container = document.getElementById('tests-container');
+    if (container) container.innerHTML = '';
 
     testCases.forEach(test => {
         const div = document.createElement('div');
@@ -1286,6 +1292,7 @@ function initializeTests() {
 
 function initializeGotchas() {
     const container = document.getElementById('gotchas-container');
+    if (container) container.innerHTML = '';
 
     gotchas.forEach((gotcha, index) => {
         const div = document.createElement('div');
@@ -1333,6 +1340,7 @@ function initializeGotchas() {
 }
 
 function updateProgress() {
+    console.log('Saving progress...');
     // Save checkbox states
     document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         const item = checkbox.closest('[data-id]');
@@ -1471,3 +1479,16 @@ function resetProgress() {
     }
 }
 
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing GHL Workflow Guide...');
+    initializeChecklists();
+    initializeWorkflows();
+    initializeImplementationOrder();
+    initializeTests();
+    initializeGotchas();
+    loadSavedCheckboxStates();
+    updateProgress();
+    console.log('Initialization complete.');
+});
