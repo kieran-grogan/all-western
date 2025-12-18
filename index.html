@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -165,6 +166,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -659,13 +661,28 @@
         }
 
         /* Utility Classes */
-        .mt-1 { margin-top: 1rem; }
-        .mt-2 { margin-top: 2rem; }
-        .mb-1 { margin-bottom: 1rem; }
-        .mb-2 { margin-bottom: 2rem; }
-        .text-center { text-align: center; }
+        .mt-1 {
+            margin-top: 1rem;
+        }
+
+        .mt-2 {
+            margin-top: 2rem;
+        }
+
+        .mb-1 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-2 {
+            margin-bottom: 2rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -683,7 +700,8 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <strong>Overall Progress</strong>
-                    <div id="progress-text" style="font-size: 0.9375rem; color: var(--text-secondary); font-weight: 500;">0% Complete</div>
+                    <div id="progress-text"
+                        style="font-size: 0.9375rem; color: var(--text-secondary); font-weight: 500;">0% Complete</div>
                 </div>
                 <button onclick="resetProgress()">Reset Progress</button>
             </div>
@@ -696,13 +714,18 @@
         <div class="tabs-container">
             <div class="tabs-nav">
                 <button class="tab-button active" onclick="switchTab('overview', this)">📋 Overview</button>
-                <button class="tab-button" onclick="switchTab('setup', this)">⚙️ Setup <span class="badge" id="setup-badge" style="margin-left: 0.5rem;">0/4</span></button>
-                <button class="tab-button" onclick="switchTab('claim', this)">📄 Claim Page <span class="badge" id="claim-badge" style="margin-left: 0.5rem;">0/3</span></button>
-                <button class="tab-button" onclick="switchTab('workflows', this)">🔄 Workflows <span class="badge" id="workflow-badge" style="margin-left: 0.5rem;">0/12</span></button>
+                <button class="tab-button" onclick="switchTab('setup', this)">⚙️ Setup <span class="badge"
+                        id="setup-badge" style="margin-left: 0.5rem;">0/4</span></button>
+                <button class="tab-button" onclick="switchTab('claim', this)">📄 Claim Page <span class="badge"
+                        id="claim-badge" style="margin-left: 0.5rem;">0/3</span></button>
+                <button class="tab-button" onclick="switchTab('workflows', this)">🔄 Workflows <span class="badge"
+                        id="workflow-badge" style="margin-left: 0.5rem;">0/12</span></button>
                 <button class="tab-button" onclick="switchTab('implementation', this)">📅 Implementation</button>
-                <button class="tab-button" onclick="switchTab('tests', this)">🧪 Tests <span class="badge" id="test-badge" style="margin-left: 0.5rem;">0/7</span></button>
+                <button class="tab-button" onclick="switchTab('tests', this)">🧪 Tests <span class="badge"
+                        id="test-badge" style="margin-left: 0.5rem;">0/7</span></button>
                 <button class="tab-button" onclick="switchTab('open-items', this)">❓ Open Items</button>
-                <button class="tab-button" onclick="switchTab('gotchas', this)">⚠️ Gotchas <span class="badge" id="gotcha-badge" style="margin-left: 0.5rem;">0/7</span></button>
+                <button class="tab-button" onclick="switchTab('gotchas', this)">⚠️ Gotchas <span class="badge"
+                        id="gotcha-badge" style="margin-left: 0.5rem;">0/7</span></button>
             </div>
 
             <!-- Tab: Overview -->
@@ -712,12 +735,18 @@
                     <div class="workflow-section-content-wrapper">
                         <div class="workflow-section-content">
                             <ul style="list-style: none; padding-left: 0;">
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Single Claim URL</strong> - All LOs use one link to claim leads</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Lead Context</strong> - LOs see name/city/loan amount before claiming</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>First Claim Wins</strong> - Deterministic claim assignment</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Blend Monitoring</strong> - Checks every 5 minutes for SSN/DOB or inactivity</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>LO Accountability</strong> - 30-minute SLA gate with auto-reassignment</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Special Routing</strong> - Spanish, DNC, and loan amount handling</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Single Claim URL</strong> - All LOs use
+                                    one link to claim leads</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Lead Context</strong> - LOs see
+                                    name/city/loan amount before claiming</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>First Claim Wins</strong> - Deterministic
+                                    claim assignment</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Blend Monitoring</strong> - Checks every 5
+                                    minutes for SSN/DOB or inactivity</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>LO Accountability</strong> - 30-minute SLA
+                                    gate with auto-reassignment</li>
+                                <li style="margin-bottom: 0.75rem;">✅ <strong>Special Routing</strong> - Spanish, DNC,
+                                    and loan amount handling</li>
                             </ul>
                         </div>
                     </div>
@@ -728,16 +757,16 @@
                     <div class="workflow-section-content-wrapper">
                         <div class="diagram-container" style="margin-top: 1rem;">
                             <div class="mermaid">flowchart TD
-A[Blend User Created App Started Event] --> B[WF-BLEND-01 Ingest Initial SMS]
-B --> C[WF-BLEND-02 Monitoring Loop 5 min]
-C -->|SSN DOB entered| D[WF-CLAIM-01 Application Blast]
-C -->|Inactive 45m| E[WF-BLEND-03 Inactivity Call Blast]
-D --> F[Claim Page FORM-LO-CLAIM]
-F --> G[WF-CLAIM-02 Claim Processor]
-G -->|Award| H[Move to Assigned Pipeline Start Gate]
-H --> I[WF-GATE-01 30m LO First-Touch Gate]
-I -->|No touch| D
-I -->|Touched| J[Normal LO Work Post-App when ready]</div>
+                                A[Blend User Created App Started Event] --> B[WF-BLEND-01 Ingest Initial SMS]
+                                B --> C[WF-BLEND-02 Monitoring Loop 5 min]
+                                C -->|SSN DOB entered| D[WF-CLAIM-01 Application Blast]
+                                C -->|Inactive 45m| E[WF-BLEND-03 Inactivity Call Blast]
+                                D --> F[Claim Page FORM-LO-CLAIM]
+                                F --> G[WF-CLAIM-02 Claim Processor]
+                                G -->|Award| H[Move to Assigned Pipeline Start Gate]
+                                H --> I[WF-GATE-01 30m LO First-Touch Gate]
+                                I -->|No touch| D
+                                I -->|Touched| J[Normal LO Work Post-App when ready]</div>
                         </div>
                     </div>
                 </div>
@@ -747,7 +776,8 @@ I -->|Touched| J[Normal LO Work Post-App when ready]</div>
             <div id="tab-setup" class="tab-content">
                 <!-- Custom Fields -->
                 <div class="workflow-section collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.1 Create Contact Custom Fields</div>
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.1 Create Contact Custom
+                        Fields</div>
                     <div class="workflow-section-content-wrapper">
                         <div class="checklist" id="fields-checklist" style="margin-top: 1rem;">
                             <!-- Fields will be populated by JS -->
@@ -784,7 +814,8 @@ I -->|Touched| J[Normal LO Work Post-App when ready]</div>
 
                 <!-- Opportunity Ownership -->
                 <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.4 Confirm Opportunity Ownership</div>
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.4 Confirm Opportunity
+                        Ownership</div>
                     <div class="workflow-section-content-wrapper">
                         <div class="checklist-item" data-id="opp-ownership" style="margin-top: 1rem;">
                             <input type="checkbox" id="opp-ownership-cb" onchange="updateProgress()">
@@ -813,58 +844,60 @@ I -->|Touched| J[Normal LO Work Post-App when ready]</div>
                 <div id="workflows-container">
                     <!-- Workflows will be populated by JS -->
                 </div>
-                
+
                 <!-- Visual Workflow Maps -->
                 <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">Visual Workflow Maps (Subsystems)</div>
+                    <div class="workflow-section-title" onclick="toggleSubSection(this)">Visual Workflow Maps
+                        (Subsystems)</div>
                     <div class="workflow-section-content-wrapper">
                         <div class="diagram-container" style="margin-top: 1rem;">
-                        <div class="workflow-section-title" style="margin-bottom: 1rem;">Claim Subsystem</div>
-                        <div class="mermaid">flowchart TD
-A[WF-CLAIM-01 Blast] --> B[Claim Page Form]
-B --> C[WF-CLAIM-02 Claim Processor]
-C -->|Already claimed| D[Notify LO Denied]
-C -->|Award| E[Assign Contact Opp]
-E --> F[WF-GATE-01 30m SLA Gate]
-F -->|Touched| G[End]
-F -->|No touch| H[Exclude LO Reblast]
-H --> A</div>
-                    </div>
-                    
-                    <div class="diagram-container">
-                        <div class="workflow-section-title" style="margin-bottom: 1rem;">Blend Monitoring Subsystem</div>
-                        <div class="mermaid">flowchart TD
-A[WF-BLEND-01 Ingest] --> B[WF-BLEND-02 Monitor Loop]
-B -->|SSN DOB| C[WF-CLAIM-01 Blast]
-B -->|Inactive 45m| D[WF-BLEND-03 Call Blast]
-D --> E[Fallback SMS Revival Pool]</div>
-                    </div>
-                    
-                    <div class="diagram-container">
-                        <div class="workflow-section-title" style="margin-bottom: 1rem;">Post-App Subsystem</div>
-                        <div class="mermaid">flowchart TD
-  A[Blend Credit Pull / App Taken] --> B[Stage: Automated Credit Review]
-  B --> C[Micro-app: Credit Summary + Credit Worthy?]
-  C -->|Yes| D[Stage: App Taken - Unengaged/Engaged Router]
-  C -->|No| Z[Nurture Pipeline]
+                            <div class="workflow-section-title" style="margin-bottom: 1rem;">Claim Subsystem</div>
+                            <div class="mermaid">flowchart TD
+                                A[Application Blast] --> B[Claim Page Form]
+                                B --> C[Claim Processor]
+                                C -->|Already claimed| D[Notify LO Denied]
+                                C -->|Award| E[Assign Contact Opp]
+                                E --> F[30m SLA Gate]
+                                F -->|Touched| G[End]
+                                F -->|No touch| H[Exclude LO Reblast]
+                                H --> A</div>
+                        </div>
 
-  D -->|Unengaged| E[Claim Blast (if unassigned)]
-  E --> F[Wait for Reply/Call]
-  F -->|Engaged| G[Stage: App Taken - Engaged]
+                        <div class="diagram-container">
+                            <div class="workflow-section-title" style="margin-bottom: 1rem;">Blend Monitoring Subsystem
+                            </div>
+                            <div class="mermaid">flowchart TD
+                                A[Blend Event Ingest] --> B[Blend Monitoring Loop]
+                                B -->|SSN DOB| C[Application Blast]
+                                B -->|Inactive 45m| D[Blend Inactivity Branch]
+                                D --> E[Fallback SMS Revival Pool]</div>
+                        </div>
 
-  G --> H[Wait for Docs Requested Event]
-  H --> I[Stage: Borrower Docs Requested - Auto/Curated]
-  I --> J[Timer: 24h nudge → 36h escalation → 2-day cadence]
-  J -->|Docs uploaded| K[Stage: Borrower Docs Received]
-  K --> L[Stage: Pending LO Pre-Approval Request]
-  L --> M[LO Checklist Form Submitted]
-  M --> N[Stage: Pre-Approval Review - Jason Work Assignment]
-  N --> O[Jason Write-up Form Submitted]
-  O -->|Approved| P[Post App - Pre-Approval Issued]
-  O -->|Needs info| Q[Stage: Pre-Approval Wait - LO Work Assignment]
-  Q --> L
-  O -->|Declined| Z</div>
-                    </div>
+                        <div class="diagram-container">
+                            <div class="workflow-section-title" style="margin-bottom: 1rem;">Post-App Subsystem</div>
+                            <div class="mermaid">flowchart TD
+                                A[Blend Credit Pull / App Taken Ingest] --> B[Stage: Automated Credit Review]
+                                B --> C[Micro-app: Credit Summary + Credit Worthy?]
+                                C -->|Yes| D[Stage: App Taken - Unengaged/Engaged Router]
+                                C -->|No| Z[Nurture Pipeline]
+
+                                D -->|Unengaged| E[Application Blast (if unassigned)]
+                                E --> F[Wait for Reply/Call]
+                                F -->|Engaged| G[Stage: App Taken - Engaged]
+
+                                G --> H[Wait for Docs Requested Event]
+                                H --> I[Stage: Borrower Docs Requested - Auto/Curated]
+                                I --> J[Timer: 24h nudge → 36h escalation → 2-day cadence]
+                                J -->|Docs uploaded| K[Stage: Borrower Docs Received]
+                                K --> L[Stage: Pending LO Pre-Approval Request]
+                                L --> M[LO Checklist Form Submitted]
+                                M --> N[Stage: Pre-Approval Review - Jason Work Assignment]
+                                N --> O[Jason Write-up Form Submitted]
+                                O -->|Approved| P[Post App - Pre-Approval Issued]
+                                O -->|Needs info| Q[Stage: Pre-Approval Wait - LO Work Assignment]
+                                Q --> L
+                                O -->|Declined| Z</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -886,11 +919,13 @@ D --> E[Fallback SMS Revival Pool]</div>
             <!-- Tab: Open Items -->
             <div id="tab-open-items" class="tab-content">
                 <div class="workflow-section-content">
-                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">These are configuration-dependent in GHL and should be decided once during implementation:</p>
+                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">These are configuration-dependent in
+                        GHL and should be decided once during implementation:</p>
                     <ol style="padding-left: 1.5rem;">
                         <li style="margin-bottom: 1rem;">
                             <strong>Re-assigned deals pipeline location:</strong><br>
-                            Do you want re-assigned deals to move back into <strong>Unassigned</strong> pipeline, or stay in <strong>Assigned</strong> pipeline "Retargeted…"?
+                            Do you want re-assigned deals to move back into <strong>Unassigned</strong> pipeline, or
+                            stay in <strong>Assigned</strong> pipeline "Retargeted…"?
                         </li>
                         <li style="margin-bottom: 1rem;">
                             <strong>What counts as "LO engaged":</strong><br>
@@ -916,8 +951,8 @@ D --> E[Fallback SMS Revival Pool]</div>
 
     <script src="app.js"></script>
     <script>
-        mermaid.initialize({ 
-            startOnLoad: true, 
+        mermaid.initialize({
+            startOnLoad: true,
             theme: 'default',
             securityLevel: 'loose',
             suppressErrors: true,
@@ -960,5 +995,5 @@ D --> E[Fallback SMS Revival Pool]</div>
         });
     </script>
 </body>
-</html>
 
+</html>

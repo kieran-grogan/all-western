@@ -127,539 +127,569 @@ const claimPageSteps = [
     }
 ];
 
-const workflows = [
-    {
-        id: 'WF-BLEND-01',
-        name: 'Blend Event Ingest',
-        subtitle: 'User Created / App Started',
-        goal: 'When Blend emits "user created/app started", create/update the Contact + Opportunity, push them into the Blend pre-app path, send the initial SMS, and start monitoring.',
-        trigger: 'Inbound Webhook (recommended) from middleware with Blend payload OR internal Blend integration trigger',
-        inputs: ['email and/or phone', 'Blend App ID', 'preferred language (if provided)', 'progress percent/stage (if provided)', 'loan amount (if provided)'],
-        steps: [
-            'Action: Find/Create Contact (if trigger doesn\'t target contact)',
-            'Action: Update Contact Fields (CF – Blend App ID, Status, Progress %, Preferred Language, Loan Amount)',
-            'Action: Create/Update Opportunity (Pipeline: Pre-Application – Unassigned New, Stage: Unassigned – Application Started – Actively Completing)',
-            'Action: Add Tag "BLEND | App Started"',
-            'Action: Send SMS to Lead',
-            'Action: Add to Workflow WF-BLEND-02'
-        ],
-        exitCriteria: [
-            'Contact exists with Blend fields set',
-            'Opportunity exists in Unassigned pipeline at "Actively Completing"',
-            'Monitoring workflow started'
-        ],
-        testCases: [
-            'Blend start event creates contact and opportunity',
-            'Stage set correctly',
-            'SMS sent once (no duplicates)'
+const workflows = {
+    'Blend Integration': {
+        title: 'Blend Integration',
+        items: [
+            {
+                id: 'blend-ingest',
+                name: 'Blend Event Ingest',
+                subtitle: 'User Created / App Started',
+                goal: 'When Blend emits "user created/app started", create/update the Contact + Opportunity, push them into the Blend pre-app path, send the initial SMS, and start monitoring.',
+                trigger: 'Inbound Webhook (recommended) from middleware with Blend payload OR internal Blend integration trigger',
+                inputs: ['email and/or phone', 'Blend App ID', 'preferred language (if provided)', 'progress percent/stage (if provided)', 'loan amount (if provided)'],
+                steps: [
+                    'Action: Find/Create Contact (if trigger doesn\'t target contact)',
+                    'Action: Update Contact Fields (CF – Blend App ID, Status, Progress %, Preferred Language, Loan Amount)',
+                    'Action: Create/Update Opportunity (Pipeline: Pre-Application – Unassigned New, Stage: Unassigned – Application Started – Actively Completing)',
+                    'Action: Add Tag "BLEND | App Started"',
+                    'Action: Send SMS to Lead',
+                    'Action: Add to Workflow "Blend Monitoring Loop"'
+                ],
+                exitCriteria: [
+                    'Contact exists with Blend fields set',
+                    'Opportunity exists in Unassigned pipeline at "Actively Completing"',
+                    'Monitoring workflow started'
+                ],
+                testCases: [
+                    'Blend start event creates contact and opportunity',
+                    'Stage set correctly',
+                    'SMS sent once (no duplicates)'
+                ]
+            },
+            {
+                id: 'blend-monitor',
+                name: 'Blend Monitoring Loop',
+                subtitle: 'Every 5 minutes',
+                goal: 'Poll for progress and route: SSN/DOB entered → assignment blast immediately; inactivity ≥45m → call blast',
+                trigger: 'Added to Workflow from "Blend Event Ingest"',
+                steps: [
+                    'Action: Update Opportunity Stage to "Unassigned – Working on Application (Blend Monitoring)"',
+                    'Action: Add Tag "BLEND | Monitoring Active"',
+                    'Loop block (repeat):',
+                    '  • Wait 5 minutes',
+                    '  • Action: Webhook (Outbound) → "Check Blend Status" (updates Last Activity, SSN Entered, DOB Entered, Progress %, Status)',
+                    '  • IF/ELSE: SSN/DOB entered → Remove tag, stop loop, Add to "Application Blast"',
+                    '  • IF/ELSE: Inactive ≥45 minutes → Remove tag, stop loop, Add to "Blend Inactivity Branch"'
+                ],
+                exitCriteria: [
+                    'Monitoring stops when assignment blast fires, or',
+                    'inactivity branch fires, or',
+                    'app completes (optional extension)'
+                ],
+                testCases: [
+                    'Lead hits monitoring stage immediately',
+                    'After SSN entered → blast triggers within one polling cycle',
+                    'After 45 mins inactivity → call blast triggers'
+                ]
+            },
+            {
+                id: 'blend-inactivity',
+                name: 'Blend Inactivity Branch',
+                subtitle: '45 minutes',
+                goal: 'Revive stalled app: call blast, if unsuccessful → SMS follow-up, then return to general revival pool',
+                trigger: 'Added to workflow from "Blend Monitoring Loop" inactivity branch',
+                steps: [
+                    'Action: Update Opportunity Stage to "Unassigned – Application Started – Not Finished"',
+                    'Action: (Optional) Add Note "Blend inactive ≥45m → initiating call blast"',
+                    'Action: Start Call Blast sequence (Attempt 1: call lead, If no answer: Attempt 2 optional, After attempts: Send SMS)',
+                    'Action: Routing after blast (if lead replies later, push back into assignment flow or AI engagement)'
+                ],
+                exitCriteria: [
+                    'Call blast executed and follow-up SMS sent if needed'
+                ],
+                testCases: [
+                    'Inactivity triggers branch and stops monitoring loop',
+                    'SMS follow-up sent only after failed call attempts'
+                ]
+            }
         ]
     },
-    {
-        id: 'WF-BLEND-02',
-        name: 'Blend Monitoring Loop',
-        subtitle: 'Every 5 minutes',
-        goal: 'Poll for progress and route: SSN/DOB entered → assignment blast immediately; inactivity ≥45m → call blast',
-        trigger: 'Added to Workflow from WF-BLEND-01',
-        steps: [
-            'Action: Update Opportunity Stage to "Unassigned – Working on Application (Blend Monitoring)"',
-            'Action: Add Tag "BLEND | Monitoring Active"',
-            'Loop block (repeat):',
-            '  • Wait 5 minutes',
-            '  • Action: Webhook (Outbound) → "Check Blend Status" (updates Last Activity, SSN Entered, DOB Entered, Progress %, Status)',
-            '  • IF/ELSE: SSN/DOB entered → Remove tag, stop loop, Add to WF-CLAIM-01',
-            '  • IF/ELSE: Inactive ≥45 minutes → Remove tag, stop loop, Add to WF-BLEND-03'
-        ],
-        exitCriteria: [
-            'Monitoring stops when assignment blast fires, or',
-            'inactivity branch fires, or',
-            'app completes (optional extension)'
-        ],
-        testCases: [
-            'Lead hits monitoring stage immediately',
-            'After SSN entered → blast triggers within one polling cycle',
-            'After 45 mins inactivity → call blast triggers'
+    'Claim & Assignment': {
+        title: 'Claim & Assignment',
+        items: [
+            {
+                id: 'claim-blast',
+                name: 'Application Blast',
+                subtitle: 'Send claim link to all LOs',
+                goal: 'Send a single message to all LOs with one claim link so everyone has equal response time and can see lead context before claiming.',
+                trigger: 'Added to workflow from "Blend Monitoring Loop" (SSN/DOB entered) OR from other flows',
+                steps: [
+                    'Action: Update Opportunity Stage to "Unassigned – Engaged – Awaiting Assignment"',
+                    'Action: Set claim fields (CF – Claim Status = unclaimed, reset claimed fields)',
+                    'Action: Add Tag "ASSIGNMENT | Needs LO"',
+                    'Action: Internal Notification (SMS) → Team "Loan Officers" (include claim URL + context)',
+                    'Action: (Optional) Admin notification'
+                ],
+                exitCriteria: [
+                    'Blast sent once',
+                    'Lead now sits in "Awaiting Assignment" stage until claimed'
+                ],
+                testCases: [
+                    'Blast arrives to all LOs',
+                    'Link opens and shows lead context',
+                    'Form submits successfully'
+                ]
+            },
+            {
+                id: 'claim-processor',
+                name: 'Claim Processor',
+                subtitle: 'First claim wins; assigns lead',
+                goal: 'Process claim submissions and award lead to the first claimant only. Move to Assigned pipeline and start the 30-min gate.',
+                trigger: 'Form Submitted (FORM – LO Claim Lead) OR Inbound Webhook',
+                steps: [
+                    'Guardrail 1: Deny excluded LO (IF Excluded User ID = form LO User ID → deny and email LO)',
+                    'Guardrail 2: First claim wins (IF Claim Status = claimed → deny and notify)',
+                    'Award branch (unclaimed):',
+                    '  • Action: Update Contact Fields (LOCK FIRST: Claim Status = claimed, Claimed At = now, Claimed By fields)',
+                    '  • Action: Assign Contact Owner (LO User ID, Only assign if unassigned toggle)',
+                    '  • Action: Update Opportunity (Pipeline: Pre-Application – Assigned New, Stage: Blend App Started – Unengaged, Owner: LO User ID)',
+                    '  • Action: Remove tag "ASSIGNMENT | Needs LO", Add tag "ASSIGNMENT | Claimed"',
+                    '  • Action: Create Task "FIRST TOUCH REQUIRED (30 MIN SLA)"',
+                    '  • Action: Add tag "SLA | Gate Active"',
+                    '  • Action: Add to Workflow "30-minute LO First-Touch Gate"',
+                    '  • Action: Internal Notification to claiming LO'
+                ],
+                exitCriteria: [
+                    'Contact + opportunity assigned to LO',
+                    'Opportunity moved to assigned pipeline',
+                    'SLA task created + gate started'
+                ],
+                testCases: [
+                    'Two LOs submit: first gets awarded; second gets denial message',
+                    'Excluded LO cannot reclaim after reassignment'
+                ]
+            },
+            {
+                id: 'gate-sla',
+                name: '30-minute LO First-Touch Gate',
+                subtitle: 'LO accountability check',
+                goal: 'If LO does not engage within 30 minutes after claiming, reassign and notify them why.',
+                trigger: 'Tag Added: "SLA | Gate Active" (Added at end of Claim Processor)',
+                steps: [
+                    'Set baseline fields (CF – LO First Touch Completed = No, CF – LO First Touch At = blank)',
+                    'Wait 30 minutes',
+                    'IF/ELSE: First Touch Completed',
+                    '  • YES → End',
+                    '  • NO → Reassignment branch:',
+                    '    - Action: Capture exclusion (CF – Excluded User ID = current Contact Owner)',
+                    '    - Action: Email previous LO',
+                    '    - Action: Reset claim lock (CF – Claim Status = unclaimed, clear claimed fields, update tags)',
+                    '    - Action: Update Opportunity Stage to "Retargeted to New LO"',
+                    '    - Action: Add to Workflow "Application Blast" (reblast)'
+                ],
+                exitCriteria: [
+                    'If touched: gate ends',
+                    'If not touched: lead reblasts and excluded LO is recorded'
+                ],
+                testCases: [
+                    'LO claims, does nothing → lead gets reblasted at 30 minutes and LO receives email',
+                    'Exclusion prevents immediate reclaim'
+                ]
+            },
+            {
+                id: 'gate-mark-touch',
+                name: 'Mark First Touch',
+                subtitle: 'How to set "LO First Touch Completed"',
+                goal: 'When LO actually engages (message or real call), mark first touch complete and move stages for analytics.',
+                trigger: 'Task Completed (task title contains "FIRST TOUCH REQUIRED") OR Transcript Generated',
+                steps: [
+                    'Trigger: Task Completed OR Transcript Generated',
+                    'Actions:',
+                    '  • CF – LO First Touch Completed = Yes',
+                    '  • CF – LO First Touch At = now',
+                    '  • Remove tag "SLA | Gate Active"',
+                    '  • Update Opportunity Stage (If SMS → "Blend App Started – Engaged with LO", If call → "Phone Engaged with LO")'
+                ],
+                exitCriteria: [
+                    'LO First Touch fields updated and gate can end naturally'
+                ],
+                testCases: [
+                    'Completing SLA task stops reassignment',
+                    'Call transcript stops reassignment'
+                ]
+            }
         ]
     },
-    {
-        id: 'WF-BLEND-03',
-        name: 'Blend Inactivity Branch',
-        subtitle: '45 minutes',
-        goal: 'Revive stalled app: call blast, if unsuccessful → SMS follow-up, then return to general revival pool',
-        trigger: 'Added to workflow from WF-BLEND-02 inactivity branch',
-        steps: [
-            'Action: Update Opportunity Stage to "Unassigned – Application Started – Not Finished"',
-            'Action: (Optional) Add Note "Blend inactive ≥45m → initiating call blast"',
-            'Action: Start Call Blast sequence (Attempt 1: call lead, If no answer: Attempt 2 optional, After attempts: Send SMS)',
-            'Action: Routing after blast (if lead replies later, push back into assignment flow or AI engagement)'
-        ],
-        exitCriteria: [
-            'Call blast executed and follow-up SMS sent if needed'
-        ],
-        testCases: [
-            'Inactivity triggers branch and stops monitoring loop',
-            'SMS follow-up sent only after failed call attempts'
+    'Post-App (Ingest & Routing)': {
+        title: 'Post-App (Ingest & Routing)',
+        items: [
+            {
+                id: 'postapp-ingest',
+                name: 'Blend Credit Pull / App Taken Ingest',
+                subtitle: 'Enter Post-App Pipeline',
+                goal: 'When Blend indicates credit pulled or app taken, move to Post-App pipeline, trigger credit review, and stop old workflows.',
+                trigger: 'Incoming Webhook (event_type = credit_pulled) OR Tag Added "BLEND | Credit Pulled"',
+                steps: [
+                    'Guardrail: If tag "POSTAPP | Entered" exists → Stop',
+                    'Set tracking: Add tags "POSTAPP | Entered", "POSTAPP | Credit Review Pending"; Set CF – Credit Review Status = pending',
+                    'Create/Update Opportunity: Pipeline "Post App – Working – Not Yet Converted", Stage "Automated Credit Review"',
+                    'Stop old workflows: Remove from Lead Intake / Pre-App monitoring',
+                    'Trigger credit review mini-app: Webhook (outbound)',
+                    'Wait for completion: Wait until CF – Credit Review Status = complete (Timeout: 10m)',
+                    'Route based on Credit Worthy: If Yes → "Route to Application Taken Stages"; If No → Nurture'
+                ],
+                exitCriteria: [
+                    'Opportunity in Post-App pipeline',
+                    'Credit review triggered and result processed'
+                ],
+                testCases: [
+                    'Credit pull event triggers workflow',
+                    'Duplicate events rejected',
+                    'Credit worthy Yes/No routing works'
+                ]
+            },
+            {
+                id: 'postapp-router',
+                name: 'Route to "Application Taken" Stages',
+                subtitle: 'Unengaged / Engaged / Not-from-a-lead',
+                goal: 'Route the opportunity to the correct stage based on source type and engagement history.',
+                trigger: 'Child workflow started by "Blend Credit Pull / App Taken Ingest" OR Blend "app completed" webhook',
+                steps: [
+                    'Determine Source Type: If "not_from_lead" → Stage "Application Taken - Not from a Lead", Add to "Not-from-a-lead Auto-assign"',
+                    'Determine Engagement State: If inbound SMS/call/reply exists → Stage "Application Taken - Engaged", Add to "Engaged -> Wait for Docs"',
+                    'Else → Stage "Application Taken - Unengaged", Add to "Unengaged Claim + Watch"'
+                ],
+                exitCriteria: [
+                    'Opportunity moved to correct Application Taken stage',
+                    'Next workflow started'
+                ],
+                testCases: [
+                    'Not-from-lead routing',
+                    'Engaged vs Unengaged routing'
+                ]
+            },
+            {
+                id: 'postapp-unengaged',
+                name: 'Unengaged Claim + Watch',
+                subtitle: 'Application Taken Unengaged',
+                goal: 'If unassigned, blast to LOs. Watch for engagement to move to Engaged stage.',
+                trigger: 'Started by "Route to Application Taken Stages" OR Stage change to "Application Taken - Unengaged"',
+                steps: [
+                    'Assignment check: If unassigned → Add to "Application Blast"',
+                    'Engagement watch: Wait up to 7 days for Reply/Call',
+                    'On engagement: Move to "Application Taken - Engaged", Add to "Engaged -> Wait for Docs"',
+                    'Timeout: Add tag "POSTAPP | Still Unengaged"'
+                ],
+                exitCriteria: [
+                    'Claim blast sent if needed',
+                    'Moves to Engaged on reply'
+                ],
+                testCases: [
+                    'Unassigned triggers blast',
+                    'Reply triggers move to Engaged'
+                ]
+            },
+            {
+                id: 'postapp-autoassign',
+                name: 'Not-from-a-lead Auto-assign',
+                subtitle: 'Application Taken Not from a Lead',
+                goal: 'Assign to the correct LO based on Blend data and skip AI if requested.',
+                trigger: 'Stage change to "Application Taken - Not from a Lead"',
+                steps: [
+                    'Identify LO from Blend data',
+                    'Assign Contact Owner',
+                    'Skip AI (optional)',
+                    'Move to "Application Taken - Engaged", Add to "Engaged -> Wait for Docs"'
+                ],
+                exitCriteria: [
+                    'LO assigned',
+                    'Moved to Engaged path'
+                ],
+                testCases: [
+                    'LO assignment works'
+                ]
+            }
         ]
     },
-    {
-        id: 'WF-CLAIM-01',
-        name: 'Application Blast',
-        subtitle: 'Send claim link to all LOs',
-        goal: 'Send a single message to all LOs with one claim link so everyone has equal response time and can see lead context before claiming.',
-        trigger: 'Added to workflow from WF-BLEND-02 (SSN/DOB entered) OR from other flows',
-        steps: [
-            'Action: Update Opportunity Stage to "Unassigned – Engaged – Awaiting Assignment"',
-            'Action: Set claim fields (CF – Claim Status = unclaimed, reset claimed fields)',
-            'Action: Add Tag "ASSIGNMENT | Needs LO"',
-            'Action: Internal Notification (SMS) → Team "Loan Officers" (include claim URL + context)',
-            'Action: (Optional) Admin notification'
-        ],
-        exitCriteria: [
-            'Blast sent once',
-            'Lead now sits in "Awaiting Assignment" stage until claimed'
-        ],
-        testCases: [
-            'Blast arrives to all LOs',
-            'Link opens and shows lead context',
-            'Form submits successfully'
+    'Post-App (Docs Tracking)': {
+        title: 'Post-App (Docs Tracking)',
+        items: [
+            {
+                id: 'postapp-engaged-docs',
+                name: 'Engaged -> Wait for Docs',
+                subtitle: 'Application Taken Engaged',
+                goal: 'Wait for Blend to request docs. If already requested, move forward immediately.',
+                trigger: 'Stage change to "Application Taken - Engaged"',
+                steps: [
+                    'Check if docs already requested: If yes → Move to "Borrower Docs Requested - Auto", Add to "Docs Requested Timer"',
+                    'Wait for doc request event: Wait for tag "DOCS | Requested" (Timeout: 48h)',
+                    'Timeout: Create LO task "Check Blend: docs request not detected"'
+                ],
+                exitCriteria: [
+                    'Moves to Docs Requested stage when event occurs'
+                ],
+                testCases: [
+                    'Immediate move if docs already requested',
+                    'Wait works'
+                ]
+            },
+            {
+                id: 'postapp-docs-ingest',
+                name: 'Blend Docs Requested Ingest',
+                subtitle: 'Docs Requested Auto',
+                goal: 'Ingest Blend documentation request event and start the timer.',
+                trigger: 'Incoming Webhook (Blend documentation event created)',
+                steps: [
+                    'Set CF – Docs Requested Timestamp = now',
+                    'Add tag "DOCS | Requested"',
+                    'Move stage → "Borrower Docs Requested - Auto"',
+                    'Add to "Docs Requested Timer"'
+                ],
+                exitCriteria: [
+                    'Stage updated',
+                    'Timer started'
+                ],
+                testCases: [
+                    'Webhook triggers workflow'
+                ]
+            },
+            {
+                id: 'postapp-docs-timer',
+                name: 'Docs Requested Timer',
+                subtitle: '24h + 36h + 2-day cadence',
+                goal: 'Nudge borrower to upload docs. Stop if docs received.',
+                trigger: 'Started by "Blend Docs Requested Ingest" OR Stage change to Docs Requested',
+                steps: [
+                    'Wait 24 hours (Stop if DOCS | Received)',
+                    '24h nudge: SMS borrower, Set CF – Docs Followup Stage = 24h_sent',
+                    'Wait 12 more hours (Total 36h)',
+                    '36h escalation: Move stage "Not received after 36 hours", SMS borrower, Email LO',
+                    '2-day cadence loop: Wait 48h, Remind, Repeat (up to 14 days)'
+                ],
+                exitCriteria: [
+                    'Stops when docs received',
+                    'Nudges sent on schedule'
+                ],
+                testCases: [
+                    '24h nudge sent',
+                    '36h escalation happens',
+                    'Stops on docs received'
+                ]
+            },
+            {
+                id: 'postapp-docs-uploaded',
+                name: 'Blend Docs Uploaded Ingest',
+                subtitle: 'Docs Received',
+                goal: 'Handle docs uploaded event, stop timer, and notify LO.',
+                trigger: 'Incoming Webhook (Documents uploaded by Prospect)',
+                steps: [
+                    'Set CF – Docs Received Timestamp = now, CF – Docs Followup Stage = closed_out',
+                    'Add tag "DOCS | Received"',
+                    'Move stage → "Borrower Docs Received"',
+                    'Stop "Docs Requested Timer"',
+                    'Notify LO (Internal Email)',
+                    'Move stage → "Pending LO Pre-Approval Request"',
+                    'Create Task for LO: "Complete LO Pre-Approval Request checklist"'
+                ],
+                exitCriteria: [
+                    'Timer stopped',
+                    'LO notified',
+                    'Task created'
+                ],
+                testCases: [
+                    'Docs upload stops timer',
+                    'Moves to Pre-Approval Request stage'
+                ]
+            }
         ]
     },
-    {
-        id: 'WF-CLAIM-02',
-        name: 'Claim Processor',
-        subtitle: 'First claim wins; assigns lead',
-        goal: 'Process claim submissions and award lead to the first claimant only. Move to Assigned pipeline and start the 30-min gate.',
-        trigger: 'Form Submitted (FORM – LO Claim Lead) OR Inbound Webhook',
-        steps: [
-            'Guardrail 1: Deny excluded LO (IF Excluded User ID = form LO User ID → deny and email LO)',
-            'Guardrail 2: First claim wins (IF Claim Status = claimed → deny and notify)',
-            'Award branch (unclaimed):',
-            '  • Action: Update Contact Fields (LOCK FIRST: Claim Status = claimed, Claimed At = now, Claimed By fields)',
-            '  • Action: Assign Contact Owner (LO User ID, Only assign if unassigned toggle)',
-            '  • Action: Update Opportunity (Pipeline: Pre-Application – Assigned New, Stage: Blend App Started – Unengaged, Owner: LO User ID)',
-            '  • Action: Remove tag "ASSIGNMENT | Needs LO", Add tag "ASSIGNMENT | Claimed"',
-            '  • Action: Create Task "FIRST TOUCH REQUIRED (30 MIN SLA)"',
-            '  • Action: Add tag "SLA | Gate Active"',
-            '  • Action: Add to Workflow WF-GATE-01',
-            '  • Action: Internal Notification to claiming LO'
-        ],
-        exitCriteria: [
-            'Contact + opportunity assigned to LO',
-            'Opportunity moved to assigned pipeline',
-            'SLA task created + gate started'
-        ],
-        testCases: [
-            'Two LOs submit: first gets awarded; second gets denial message',
-            'Excluded LO cannot reclaim after reassignment'
+    'Post-App (Pre-Approval)': {
+        title: 'Post-App (Pre-Approval)',
+        items: [
+            {
+                id: 'postapp-lo-req',
+                name: 'LO Pre-Approval Request Form -> Jason Queue',
+                subtitle: 'Operational Handoff',
+                goal: 'Route LO request to Jason for review.',
+                trigger: 'Form Submitted: FORM-LO-PREAPPROVAL-REQUEST',
+                steps: [
+                    'Tag/Field updates: Submitted status',
+                    'Move stage → "Pre-Approval Review - Jason Work Assignment"',
+                    'Create Task for Jason: "Pre-Approval Review"',
+                    'Email Jason with details'
+                ],
+                exitCriteria: [
+                    'Jason notified',
+                    'Task created'
+                ],
+                testCases: [
+                    'Form submit routes to Jason'
+                ]
+            },
+            {
+                id: 'postapp-jason-dec',
+                name: 'Jason Write-Up Form -> Decision Routing',
+                subtitle: 'Decision Execution',
+                goal: 'Route based on Jason\'s decision (Approved, Needs Info, Declined).',
+                trigger: 'Form Submitted: FORM-JASON-PREAPPROVAL-WRITEUP',
+                steps: [
+                    'Branch on Decision:',
+                    '  • Approved: Move to "Pre-Approval Issued", Notify LO',
+                    '  • Needs Info: Move to "Pre-Approval Wait - LO Work Assignment", Task for LO',
+                    '  • Declined: Move to Nurture, Notify LO'
+                ],
+                exitCriteria: [
+                    'Moved to correct post-decision stage'
+                ],
+                testCases: [
+                    'Approved path',
+                    'Needs Info path'
+                ]
+            },
+            {
+                id: 'postapp-refi',
+                name: 'Refinance Review Request',
+                subtitle: 'Refi Queue',
+                goal: 'Route refi requests to Jason.',
+                trigger: 'Tag "REFI | Review Requested" OR Form Submitted',
+                steps: [
+                    'Move stage → "Refinance Review - Jason Work Assignment"',
+                    'Create Task for Jason',
+                    'Email Jason'
+                ],
+                exitCriteria: [
+                    'Jason notified'
+                ],
+                testCases: [
+                    'Refi request routes correctly'
+                ]
+            }
         ]
     },
-    {
-        id: 'WF-GATE-01',
-        name: '30-minute LO First-Touch Gate',
-        subtitle: 'LO accountability check',
-        goal: 'If LO does not engage within 30 minutes after claiming, reassign and notify them why.',
-        trigger: 'Tag Added: "SLA | Gate Active" (Added at end of Claim Processor)',
-        steps: [
-            'Set baseline fields (CF – LO First Touch Completed = No, CF – LO First Touch At = blank)',
-            'Wait 30 minutes',
-            'IF/ELSE: First Touch Completed',
-            '  • YES → End',
-            '  • NO → Reassignment branch:',
-            '    - Action: Capture exclusion (CF – Excluded User ID = current Contact Owner)',
-            '    - Action: Email previous LO',
-            '    - Action: Reset claim lock (CF – Claim Status = unclaimed, clear claimed fields, update tags)',
-            '    - Action: Update Opportunity Stage to "Retargeted to New LO"',
-            '    - Action: Add to Workflow WF-CLAIM-01 (reblast)'
-        ],
-        exitCriteria: [
-            'If touched: gate ends',
-            'If not touched: lead reblasts and excluded LO is recorded'
-        ],
-        testCases: [
-            'LO claims, does nothing → lead gets reblasted at 30 minutes and LO receives email',
-            'Exclusion prevents immediate reclaim'
-        ]
-    },
-    {
-        id: 'WF-GATE-02',
-        name: 'Mark First Touch',
-        subtitle: 'How to set "LO First Touch Completed"',
-        goal: 'When LO actually engages (message or real call), mark first touch complete and move stages for analytics.',
-        trigger: 'Task Completed (task title contains "FIRST TOUCH REQUIRED") OR Transcript Generated',
-        steps: [
-            'Trigger: Task Completed OR Transcript Generated',
-            'Actions:',
-            '  • CF – LO First Touch Completed = Yes',
-            '  • CF – LO First Touch At = now',
-            '  • Remove tag "SLA | Gate Active"',
-            '  • Update Opportunity Stage (If SMS → "Blend App Started – Engaged with LO", If call → "Phone Engaged with LO")'
-        ],
-        exitCriteria: [
-            'LO First Touch fields updated and gate can end naturally'
-        ],
-        testCases: [
-            'Completing SLA task stops reassignment',
-            'Call transcript stops reassignment'
-        ]
-    },
-    {
-        id: 'WF-LANG-01',
-        name: 'Spanish Routing',
-        subtitle: 'Language detection and routing',
-        goal: 'Detect Spanish leads (preferred language OR Spanish response) and route to Spanish AI handling + tracking stages.',
-        trigger: 'Preferred Language field updated to Spanish OR Customer Replied (with AI classification) OR Transcript Generated',
-        steps: [
-            'IF/ELSE: Preferred Language = Spanish',
-            '  • YES: Add tag "LANG | Spanish", Update Opportunity stage, Start Spanish AI engagement workflow',
-            'If using message-based detection: Trigger Customer Replied, AI classification, If Spanish → apply routing'
-        ],
-        exitCriteria: [
-            'Spanish leads are isolated in their own stages for reporting and are engaged appropriately'
-        ],
-        testCases: [
-            'Blend preferred language routes correctly',
-            'Spanish reply routes correctly'
-        ]
-    },
-    {
-        id: 'WF-DNC-01',
-        name: 'DNC / STOP Handler',
-        subtitle: 'Opt-out handling',
-        goal: 'If contact opts out, stop calling/texting and send email re-engagement instructions.',
-        trigger: 'Keyword trigger (STOP, DNC) in inbound SMS OR "Contact DND enabled" trigger',
-        steps: [
-            'Update opportunity stage: "DNC – Specific DNC Request"',
-            'Add tag: "DNC | Requested"',
-            'Disable SMS/calls for the contact (DND actions)',
-            'Send Email re-engagement instructions',
-            'Remove from active workflows (monitoring/claim/gate)'
-        ],
-        exitCriteria: [
-            'Contact is suppressed and moved to DNC stage'
-        ],
-        testCases: [
-            'STOP triggers DNC stage and suppresses future outreach'
-        ]
-    },
-    {
-        id: 'WF-DATA-01',
-        name: 'Loan Amount → Opportunity Value Sync',
-        subtitle: 'Data synchronization',
-        goal: 'Ensure Opportunity Value is set from Loan Amount for accurate reporting.',
-        trigger: 'Opportunity Created OR Contact Field Updated: CF – Loan Amount',
-        steps: [
-            'IF/ELSE: If CF – Loan Amount is empty → add tag "DATA | Missing Loan Amount" and end',
-            'Update Opportunity: Set Opportunity Value = CF – Loan Amount'
-        ],
-        exitCriteria: [
-            'Opportunity value is reliably populated'
-        ],
-        testCases: [
-            'Zillow/MRC leads populate value',
-            'Missing values get tagged for backfill'
-        ]
-    },
-    {
-        id: 'WF-DATA-02',
-        name: 'Missing Loan Amount Tagging',
-        subtitle: 'Optional data tracking',
-        goal: 'Tag contacts/opportunities missing loan amount data for backfill.',
-        trigger: 'Opportunity Created OR Contact Field Updated',
-        optional: true,
-        steps: [
-            'Check if CF – Loan Amount is empty',
-            'If empty: Add tag "DATA | Missing Loan Amount"'
-        ],
-        exitCriteria: [
-            'Missing loan amounts are tagged for manual review'
-        ],
-        testCases: [
-            'Contacts without loan amount get tagged'
-        ]
-    },
-    {
-        id: 'WF-LEAD-01',
-        name: 'Not Interested Handling',
-        subtitle: 'Recommended lead qualification',
-        goal: 'If lead explicitly says they are not interested, respond politely and route them for later re-engagement (no aggressive chasing).',
-        trigger: 'Customer Replied (in lead intake / AI messages) with AI intent classification = "not interested" (or keyword rules)',
-        optional: true,
-        steps: [
-            'Update opportunity stage: "Not Interested"',
-            'Send SMS: "Thanks — I\'ll stop reaching out. If you ever want help, text us anytime."',
-            'Add tag: "NOT INTERESTED | CONFIRMED"',
-            'Remove from active micro-workflows'
-        ],
-        exitCriteria: [
-            'Lead is categorized and no longer spams pipeline logic'
-        ],
-        testCases: [
-            '"not ready / wrong person / stop" routes correctly'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-01',
-        name: 'Blend Credit Pull / App Taken Ingest',
-        subtitle: 'Enter Post-App Pipeline',
-        goal: 'When Blend indicates credit pulled or app taken, move to Post-App pipeline, trigger credit review, and stop old workflows.',
-        trigger: 'Incoming Webhook (event_type = credit_pulled) OR Tag Added "BLEND | Credit Pulled"',
-        steps: [
-            'Guardrail: If tag "POSTAPP | Entered" exists → Stop',
-            'Set tracking: Add tags "POSTAPP | Entered", "POSTAPP | Credit Review Pending"; Set CF – Credit Review Status = pending',
-            'Create/Update Opportunity: Pipeline "Post App – Working – Not Yet Converted", Stage "Automated Credit Review"',
-            'Stop old workflows: Remove from Lead Intake / Pre-App monitoring',
-            'Trigger credit review mini-app: Webhook (outbound)',
-            'Wait for completion: Wait until CF – Credit Review Status = complete (Timeout: 10m)',
-            'Route based on Credit Worthy: If Yes → WF-POSTAPP-02; If No → Nurture'
-        ],
-        exitCriteria: [
-            'Opportunity in Post-App pipeline',
-            'Credit review triggered and result processed'
-        ],
-        testCases: [
-            'Credit pull event triggers workflow',
-            'Duplicate events rejected',
-            'Credit worthy Yes/No routing works'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-02',
-        name: 'Route to "Application Taken" Stages',
-        subtitle: 'Unengaged / Engaged / Not-from-a-lead',
-        goal: 'Route the opportunity to the correct stage based on source type and engagement history.',
-        trigger: 'Child workflow started by WF-POSTAPP-01 OR Blend "app completed" webhook',
-        steps: [
-            'Determine Source Type: If "not_from_lead" → Stage "Application Taken - Not from a Lead", Add to WF-POSTAPP-03A',
-            'Determine Engagement State: If inbound SMS/call/reply exists → Stage "Application Taken - Engaged", Add to WF-POSTAPP-04',
-            'Else → Stage "Application Taken - Unengaged", Add to WF-POSTAPP-03'
-        ],
-        exitCriteria: [
-            'Opportunity moved to correct Application Taken stage',
-            'Next workflow started'
-        ],
-        testCases: [
-            'Not-from-lead routing',
-            'Engaged vs Unengaged routing'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-03',
-        name: 'Unengaged Claim + Watch',
-        subtitle: 'Application Taken Unengaged',
-        goal: 'If unassigned, blast to LOs. Watch for engagement to move to Engaged stage.',
-        trigger: 'Started by WF-POSTAPP-02 OR Stage change to "Application Taken - Unengaged"',
-        steps: [
-            'Assignment check: If unassigned → Add to WF-CLAIM-01 (Application Blast)',
-            'Engagement watch: Wait up to 7 days for Reply/Call',
-            'On engagement: Move to "Application Taken - Engaged", Add to WF-POSTAPP-04',
-            'Timeout: Add tag "POSTAPP | Still Unengaged"'
-        ],
-        exitCriteria: [
-            'Claim blast sent if needed',
-            'Moves to Engaged on reply'
-        ],
-        testCases: [
-            'Unassigned triggers blast',
-            'Reply triggers move to Engaged'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-03A',
-        name: 'Not-from-a-lead Auto-assign',
-        subtitle: 'Application Taken Not from a Lead',
-        goal: 'Assign to the correct LO based on Blend data and skip AI if requested.',
-        trigger: 'Stage change to "Application Taken - Not from a Lead"',
-        steps: [
-            'Identify LO from Blend data',
-            'Assign Contact Owner',
-            'Skip AI (optional)',
-            'Move to "Application Taken - Engaged", Add to WF-POSTAPP-04'
-        ],
-        exitCriteria: [
-            'LO assigned',
-            'Moved to Engaged path'
-        ],
-        testCases: [
-            'LO assignment works'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-04',
-        name: 'Engaged -> Wait for Docs',
-        subtitle: 'Application Taken Engaged',
-        goal: 'Wait for Blend to request docs. If already requested, move forward immediately.',
-        trigger: 'Stage change to "Application Taken - Engaged"',
-        steps: [
-            'Check if docs already requested: If yes → Move to "Borrower Docs Requested - Auto", Add to WF-POSTAPP-10',
-            'Wait for doc request event: Wait for tag "DOCS | Requested" (Timeout: 48h)',
-            'Timeout: Create LO task "Check Blend: docs request not detected"'
-        ],
-        exitCriteria: [
-            'Moves to Docs Requested stage when event occurs'
-        ],
-        testCases: [
-            'Immediate move if docs already requested',
-            'Wait works'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-05',
-        name: 'Blend Docs Requested Ingest',
-        subtitle: 'Docs Requested Auto',
-        goal: 'Ingest Blend documentation request event and start the timer.',
-        trigger: 'Incoming Webhook (Blend documentation event created)',
-        steps: [
-            'Set CF – Docs Requested Timestamp = now',
-            'Add tag "DOCS | Requested"',
-            'Move stage → "Borrower Docs Requested - Auto"',
-            'Add to WF-POSTAPP-10 (Docs Requested Timer)'
-        ],
-        exitCriteria: [
-            'Stage updated',
-            'Timer started'
-        ],
-        testCases: [
-            'Webhook triggers workflow'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-07',
-        name: 'Blend Docs Uploaded Ingest',
-        subtitle: 'Docs Received',
-        goal: 'Handle docs uploaded event, stop timer, and notify LO.',
-        trigger: 'Incoming Webhook (Documents uploaded by Prospect)',
-        steps: [
-            'Set CF – Docs Received Timestamp = now, CF – Docs Followup Stage = closed_out',
-            'Add tag "DOCS | Received"',
-            'Move stage → "Borrower Docs Received"',
-            'Stop WF-POSTAPP-10',
-            'Notify LO (Internal Email)',
-            'Move stage → "Pending LO Pre-Approval Request"',
-            'Create Task for LO: "Complete LO Pre-Approval Request checklist"'
-        ],
-        exitCriteria: [
-            'Timer stopped',
-            'LO notified',
-            'Task created'
-        ],
-        testCases: [
-            'Docs upload stops timer',
-            'Moves to Pre-Approval Request stage'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-10',
-        name: 'Docs Requested Timer',
-        subtitle: '24h + 36h + 2-day cadence',
-        goal: 'Nudge borrower to upload docs. Stop if docs received.',
-        trigger: 'Started by WF-POSTAPP-05 OR Stage change to Docs Requested',
-        steps: [
-            'Wait 24 hours (Stop if DOCS | Received)',
-            '24h nudge: SMS borrower, Set CF – Docs Followup Stage = 24h_sent',
-            'Wait 12 more hours (Total 36h)',
-            '36h escalation: Move stage "Not received after 36 hours", SMS borrower, Email LO',
-            '2-day cadence loop: Wait 48h, Remind, Repeat (up to 14 days)'
-        ],
-        exitCriteria: [
-            'Stops when docs received',
-            'Nudges sent on schedule'
-        ],
-        testCases: [
-            '24h nudge sent',
-            '36h escalation happens',
-            'Stops on docs received'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-20',
-        name: 'LO Pre-Approval Request Form -> Jason Queue',
-        subtitle: 'Operational Handoff',
-        goal: 'Route LO request to Jason for review.',
-        trigger: 'Form Submitted: FORM-LO-PREAPPROVAL-REQUEST',
-        steps: [
-            'Tag/Field updates: Submitted status',
-            'Move stage → "Pre-Approval Review - Jason Work Assignment"',
-            'Create Task for Jason: "Pre-Approval Review"',
-            'Email Jason with details'
-        ],
-        exitCriteria: [
-            'Jason notified',
-            'Task created'
-        ],
-        testCases: [
-            'Form submit routes to Jason'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-30',
-        name: 'Jason Write-Up Form -> Decision Routing',
-        subtitle: 'Decision Execution',
-        goal: 'Route based on Jason\'s decision (Approved, Needs Info, Declined).',
-        trigger: 'Form Submitted: FORM-JASON-PREAPPROVAL-WRITEUP',
-        steps: [
-            'Branch on Decision:',
-            '  • Approved: Move to "Pre-Approval Issued", Notify LO',
-            '  • Needs Info: Move to "Pre-Approval Wait - LO Work Assignment", Task for LO',
-            '  • Declined: Move to Nurture, Notify LO'
-        ],
-        exitCriteria: [
-            'Moved to correct post-decision stage'
-        ],
-        testCases: [
-            'Approved path',
-            'Needs Info path'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-40',
-        name: 'Refinance Review Request',
-        subtitle: 'Refi Queue',
-        goal: 'Route refi requests to Jason.',
-        trigger: 'Tag "REFI | Review Requested" OR Form Submitted',
-        steps: [
-            'Move stage → "Refinance Review - Jason Work Assignment"',
-            'Create Task for Jason',
-            'Email Jason'
-        ],
-        exitCriteria: [
-            'Jason notified'
-        ],
-        testCases: [
-            'Refi request routes correctly'
-        ]
-    },
-    {
-        id: 'WF-POSTAPP-90',
-        name: 'Nurture Routing (Placeholder)',
-        subtitle: 'Not Credit Worthy / Docs Never Received',
-        goal: 'Move rejected/stalled leads to nurture.',
-        trigger: 'Various rejection points',
-        steps: [
-            'Move to Nurture Pipeline/Stage',
-            'Apply tag-based status'
-        ],
-        exitCriteria: [
-            'Lead moved to nurture'
-        ],
-        testCases: [
-            'Routing works'
+    'Utility & Other': {
+        title: 'Utility & Other',
+        items: [
+            {
+                id: 'lang-routing',
+                name: 'Spanish Routing',
+                subtitle: 'Language detection and routing',
+                goal: 'Detect Spanish leads (preferred language OR Spanish response) and route to Spanish AI handling + tracking stages.',
+                trigger: 'Preferred Language field updated to Spanish OR Customer Replied (with AI classification) OR Transcript Generated',
+                steps: [
+                    'IF/ELSE: Preferred Language = Spanish',
+                    '  • YES: Add tag "LANG | Spanish", Update Opportunity stage, Start Spanish AI engagement workflow',
+                    'If using message-based detection: Trigger Customer Replied, AI classification, If Spanish → apply routing'
+                ],
+                exitCriteria: [
+                    'Spanish leads are isolated in their own stages for reporting and are engaged appropriately'
+                ],
+                testCases: [
+                    'Blend preferred language routes correctly',
+                    'Spanish reply routes correctly'
+                ]
+            },
+            {
+                id: 'dnc-handler',
+                name: 'DNC / STOP Handler',
+                subtitle: 'Opt-out handling',
+                goal: 'If contact opts out, stop calling/texting and send email re-engagement instructions.',
+                trigger: 'Keyword trigger (STOP, DNC) in inbound SMS OR "Contact DND enabled" trigger',
+                steps: [
+                    'Update opportunity stage: "DNC – Specific DNC Request"',
+                    'Add tag: "DNC | Requested"',
+                    'Disable SMS/calls for the contact (DND actions)',
+                    'Send Email re-engagement instructions',
+                    'Remove from active workflows (monitoring/claim/gate)'
+                ],
+                exitCriteria: [
+                    'Contact is suppressed and moved to DNC stage'
+                ],
+                testCases: [
+                    'STOP triggers DNC stage and suppresses future outreach'
+                ]
+            },
+            {
+                id: 'data-sync',
+                name: 'Loan Amount → Opportunity Value Sync',
+                subtitle: 'Data synchronization',
+                goal: 'Ensure Opportunity Value is set from Loan Amount for accurate reporting.',
+                trigger: 'Opportunity Created OR Contact Field Updated: CF – Loan Amount',
+                steps: [
+                    'IF/ELSE: If CF – Loan Amount is empty → add tag "DATA | Missing Loan Amount" and end',
+                    'Update Opportunity: Set Opportunity Value = CF – Loan Amount'
+                ],
+                exitCriteria: [
+                    'Opportunity value is reliably populated'
+                ],
+                testCases: [
+                    'Zillow/MRC leads populate value',
+                    'Missing values get tagged for backfill'
+                ]
+            },
+            {
+                id: 'data-missing',
+                name: 'Missing Loan Amount Tagging',
+                subtitle: 'Optional data tracking',
+                goal: 'Tag contacts/opportunities missing loan amount data for backfill.',
+                trigger: 'Opportunity Created OR Contact Field Updated',
+                optional: true,
+                steps: [
+                    'Check if CF – Loan Amount is empty',
+                    'If empty: Add tag "DATA | Missing Loan Amount"'
+                ],
+                exitCriteria: [
+                    'Missing loan amounts are tagged for manual review'
+                ],
+                testCases: [
+                    'Contacts without loan amount get tagged'
+                ]
+            },
+            {
+                id: 'lead-not-interested',
+                name: 'Not Interested Handling',
+                subtitle: 'Recommended lead qualification',
+                goal: 'If lead explicitly says they are not interested, respond politely and route them for later re-engagement (no aggressive chasing).',
+                trigger: 'Customer Replied (in lead intake / AI messages) with AI intent classification = "not interested" (or keyword rules)',
+                optional: true,
+                steps: [
+                    'Update opportunity stage: "Not Interested"',
+                    'Send SMS: "Thanks — I\'ll stop reaching out. If you ever want help, text us anytime."',
+                    'Add tag: "NOT INTERESTED | CONFIRMED"',
+                    'Remove from active micro-workflows'
+                ],
+                exitCriteria: [
+                    'Lead is categorized and no longer spams pipeline logic'
+                ],
+                testCases: [
+                    '"not ready / wrong person / stop" routes correctly'
+                ]
+            },
+            {
+                id: 'postapp-nurture',
+                name: 'Nurture Routing (Placeholder)',
+                subtitle: 'Not Credit Worthy / Docs Never Received',
+                goal: 'Move rejected/stalled leads to nurture.',
+                trigger: 'Various rejection points',
+                steps: [
+                    'Move to Nurture Pipeline/Stage',
+                    'Apply tag-based status'
+                ],
+                exitCriteria: [
+                    'Lead moved to nurture'
+                ],
+                testCases: [
+                    'Routing works'
+                ]
+            }
         ]
     }
-];
+};
 
 const implementationOrder = [
     { id: 'impl-1', title: 'Create fields/tags/teams', description: 'Complete Section 2 setup requirements' },
     { id: 'impl-2', title: 'Build claim pages + claim form', description: 'Complete Section 3 (claim page, form, success page)' },
-    { id: 'impl-3', title: 'Build WF-CLAIM-01 and WF-CLAIM-02', description: 'Application Blast + Claim Processor workflows' },
-    { id: 'impl-4', title: 'Build WF-GATE-01 and WF-GATE-02', description: 'SLA gate + First touch marker workflows' },
-    { id: 'impl-5', title: 'Build WF-BLEND-01', description: 'Blend ingest workflow' },
-    { id: 'impl-6', title: 'Build WF-BLEND-02 and WF-BLEND-03', description: 'Monitor + Inactivity workflows' },
-    { id: 'impl-7', title: 'Build Spanish routing + DNC + data sync workflows', description: 'WF-LANG-01, WF-DNC-01, WF-DATA-01, WF-DATA-02, WF-LEAD-01' },
+    { id: 'impl-3', title: 'Build Claim & Assignment Workflows', description: 'Application Blast + Claim Processor' },
+    { id: 'impl-4', title: 'Build SLA Gate Workflows', description: '30-minute LO First-Touch Gate + Mark First Touch' },
+    { id: 'impl-5', title: 'Build Blend Ingest Workflow', description: 'Blend Event Ingest' },
+    { id: 'impl-6', title: 'Build Blend Monitor Workflows', description: 'Blend Monitoring Loop + Inactivity Branch' },
+    { id: 'impl-7', title: 'Build Utility Workflows', description: 'Spanish Routing, DNC Handler, Data Sync, Not Interested Handling' },
     { id: 'impl-8', title: 'Create Post-App Pipeline C + Stages', description: 'Create "Post App – Working – Not Yet Converted" pipeline and all 14 stages.' },
     { id: 'impl-9', title: 'Create Post-App Fields, Tags, Custom Values', description: 'Add new sections D, E, F, G, H to Custom Fields and create new Tags.' },
     { id: 'impl-10', title: 'Build Post-App Forms', description: 'Build "LO Pre-Approval Request", "Jason Pre-Approval Write-Up", and "Refi Review Request" forms.' },
-    { id: 'impl-11', title: 'Build Ingest & Routing Workflows', description: 'WF-POSTAPP-01, 02, 03, 03A' },
-    { id: 'impl-12', title: 'Build Docs Tracking Workflows', description: 'WF-POSTAPP-04, 05, 07, 10' },
-    { id: 'impl-13', title: 'Build Pre-Approval & Refi Workflows', description: 'WF-POSTAPP-20, 30, 40' },
+    { id: 'impl-11', title: 'Build Post-App Ingest & Routing', description: 'Blend Credit Pull Ingest, Router, Unengaged Watch, Auto-assign' },
+    { id: 'impl-12', title: 'Build Post-App Docs Tracking', description: 'Engaged -> Wait for Docs, Docs Requested Ingest, Docs Uploaded Ingest, Docs Timer' },
+    { id: 'impl-13', title: 'Build Post-App Pre-Approval & Refi', description: 'LO Request -> Jason, Jason Write-Up -> Decision, Refi Review' },
     { id: 'impl-14', title: 'Run tests', description: 'Complete Section 7 test plan' }
 ];
 
@@ -957,181 +987,207 @@ function initializeChecklists() {
 function initializeWorkflows() {
     const container = document.getElementById('workflows-container');
 
-    workflows.forEach(workflow => {
-        const card = document.createElement('div');
-        card.className = 'workflow-card collapsed';
-        card.setAttribute('data-id', workflow.id);
+    Object.keys(workflows).forEach((key, index) => {
+        const category = workflows[key];
 
-        const header = document.createElement('div');
-        header.className = 'workflow-header';
-        header.onclick = function () {
-            card.classList.toggle('collapsed');
-        };
+        // Create category section
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'workflow-section collapsed';
+        if (index > 0) categoryDiv.classList.add('mt-2');
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'workflow-header-checkbox';
-        checkbox.onchange = function (e) {
-            e.stopPropagation();
-            if (this.checked) {
-                card.classList.add('completed');
-            } else {
-                card.classList.remove('completed');
+        // Category Title
+        const categoryTitle = document.createElement('div');
+        categoryTitle.className = 'workflow-section-title';
+        categoryTitle.textContent = category.title;
+        categoryTitle.onclick = function () { toggleSubSection(this); };
+        categoryDiv.appendChild(categoryTitle);
+
+        // Category Content Wrapper
+        const categoryContent = document.createElement('div');
+        categoryContent.className = 'workflow-section-content-wrapper';
+
+        // Iterate workflows in this category
+        category.items.forEach(workflow => {
+            const card = document.createElement('div');
+            card.className = 'workflow-card collapsed';
+            card.setAttribute('data-id', workflow.id);
+
+            const header = document.createElement('div');
+            header.className = 'workflow-header';
+            header.onclick = function () {
+                card.classList.toggle('collapsed');
+            };
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'workflow-header-checkbox';
+            checkbox.onchange = function (e) {
+                e.stopPropagation();
+                if (this.checked) {
+                    card.classList.add('completed');
+                } else {
+                    card.classList.remove('completed');
+                }
+                updateProgress();
+            };
+            checkbox.onclick = function (e) {
+                e.stopPropagation();
+            };
+
+            const headerLeft = document.createElement('div');
+            headerLeft.className = 'workflow-header-left';
+
+            const headerContent = document.createElement('div');
+            headerContent.className = 'workflow-header-content';
+
+            const id = document.createElement('div');
+            id.className = 'workflow-id';
+            id.textContent = workflow.id; // Keep ID for reference but it's small
+
+            const title = document.createElement('div');
+            title.className = 'workflow-title';
+            title.textContent = `${workflow.name} — ${workflow.subtitle}`;
+
+            if (workflow.optional) {
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-optional';
+                badge.textContent = 'Optional';
+                title.appendChild(badge);
             }
-            updateProgress();
-        };
-        checkbox.onclick = function (e) {
-            e.stopPropagation();
-        };
+            headerContent.appendChild(id);
+            headerContent.appendChild(title);
 
-        const headerLeft = document.createElement('div');
-        headerLeft.className = 'workflow-header-left';
+            headerLeft.appendChild(checkbox);
+            headerLeft.appendChild(headerContent);
 
-        const headerContent = document.createElement('div');
-        headerContent.className = 'workflow-header-content';
+            header.appendChild(headerLeft);
 
-        const id = document.createElement('div');
-        id.className = 'workflow-id';
-        id.textContent = workflow.id;
-        const title = document.createElement('div');
-        title.className = 'workflow-title';
-        title.textContent = `${workflow.name} — ${workflow.subtitle}`;
-        if (workflow.optional) {
-            const badge = document.createElement('span');
-            badge.className = 'badge badge-optional';
-            badge.textContent = 'Optional';
-            title.appendChild(badge);
-        }
-        headerContent.appendChild(id);
-        headerContent.appendChild(title);
+            const goal = document.createElement('div');
+            goal.className = 'workflow-section';
+            const goalTitle = document.createElement('div');
+            goalTitle.className = 'workflow-section-title no-collapse';
+            goalTitle.textContent = 'Goal';
+            const goalContent = document.createElement('div');
+            goalContent.className = 'workflow-section-content';
+            goalContent.textContent = workflow.goal;
+            goal.appendChild(goalTitle);
+            goal.appendChild(goalContent);
 
-        headerLeft.appendChild(checkbox);
-        headerLeft.appendChild(headerContent);
+            const trigger = document.createElement('div');
+            trigger.className = 'workflow-section';
+            const triggerTitle = document.createElement('div');
+            triggerTitle.className = 'workflow-section-title no-collapse';
+            triggerTitle.textContent = 'Trigger';
+            const triggerContent = document.createElement('div');
+            triggerContent.className = 'workflow-section-content';
+            triggerContent.textContent = workflow.trigger;
+            trigger.appendChild(triggerTitle);
+            trigger.appendChild(triggerContent);
 
-        header.appendChild(headerLeft);
-
-        const goal = document.createElement('div');
-        goal.className = 'workflow-section';
-        const goalTitle = document.createElement('div');
-        goalTitle.className = 'workflow-section-title no-collapse';
-        goalTitle.textContent = 'Goal';
-        const goalContent = document.createElement('div');
-        goalContent.className = 'workflow-section-content';
-        goalContent.textContent = workflow.goal;
-        goal.appendChild(goalTitle);
-        goal.appendChild(goalContent);
-
-        const trigger = document.createElement('div');
-        trigger.className = 'workflow-section';
-        const triggerTitle = document.createElement('div');
-        triggerTitle.className = 'workflow-section-title no-collapse';
-        triggerTitle.textContent = 'Trigger';
-        const triggerContent = document.createElement('div');
-        triggerContent.className = 'workflow-section-content';
-        triggerContent.textContent = workflow.trigger;
-        trigger.appendChild(triggerTitle);
-        trigger.appendChild(triggerContent);
-
-        const steps = document.createElement('div');
-        steps.className = 'workflow-section';
-        const stepsTitle = document.createElement('div');
-        stepsTitle.className = 'workflow-section-title no-collapse';
-        stepsTitle.textContent = 'Steps (Build Order)';
-        const stepsContent = document.createElement('div');
-        stepsContent.className = 'workflow-section-content';
-        const stepsList = document.createElement('ol');
-        stepsList.className = 'workflow-steps';
-        workflow.steps.forEach(step => {
-            const li = document.createElement('li');
-            li.innerHTML = step.replace(/\n/g, '<br>');
-            stepsList.appendChild(li);
-        });
-        stepsContent.appendChild(stepsList);
-        steps.appendChild(stepsTitle);
-        steps.appendChild(stepsContent);
-
-        const exit = document.createElement('div');
-        exit.className = 'workflow-section';
-        const exitTitle = document.createElement('div');
-        exitTitle.className = 'workflow-section-title no-collapse';
-        exitTitle.textContent = 'Exit Criteria';
-        const exitContent = document.createElement('div');
-        exitContent.className = 'workflow-section-content';
-        const exitList = document.createElement('ul');
-        exitList.style.listStyle = 'none';
-        exitList.style.paddingLeft = '0';
-        workflow.exitCriteria.forEach(criteria => {
-            const li = document.createElement('li');
-            li.textContent = `✓ ${criteria}`;
-            li.style.marginBottom = '0.5rem';
-            exitList.appendChild(li);
-        });
-        exitContent.appendChild(exitList);
-        exit.appendChild(exitTitle);
-        exit.appendChild(exitContent);
-
-        const tests = document.createElement('div');
-        tests.className = 'workflow-section';
-        const testsTitle = document.createElement('div');
-        testsTitle.className = 'workflow-section-title no-collapse';
-        testsTitle.textContent = 'Test Cases';
-        const testsContent = document.createElement('div');
-        testsContent.className = 'workflow-section-content';
-        const testsList = document.createElement('ul');
-        testsList.style.listStyle = 'none';
-        testsList.style.paddingLeft = '0';
-        workflow.testCases.forEach(test => {
-            const li = document.createElement('li');
-            li.textContent = `✓ ${test}`;
-            li.style.marginBottom = '0.5rem';
-            testsList.appendChild(li);
-        });
-        testsContent.appendChild(testsList);
-        tests.appendChild(testsTitle);
-        tests.appendChild(testsContent);
-
-        const cardContent = document.createElement('div');
-        cardContent.className = 'workflow-card-content';
-
-        card.appendChild(header);
-        cardContent.appendChild(goal);
-        cardContent.appendChild(trigger);
-        if (workflow.inputs) {
-            const inputs = document.createElement('div');
-            inputs.className = 'workflow-section';
-            const inputsTitle = document.createElement('div');
-            inputsTitle.className = 'workflow-section-title no-collapse';
-            inputsTitle.textContent = 'Required Inputs';
-            const inputsContent = document.createElement('div');
-            inputsContent.className = 'workflow-section-content';
-            const inputsList = document.createElement('ul');
-            inputsList.style.listStyle = 'none';
-            inputsList.style.paddingLeft = '0';
-            workflow.inputs.forEach(input => {
+            const steps = document.createElement('div');
+            steps.className = 'workflow-section';
+            const stepsTitle = document.createElement('div');
+            stepsTitle.className = 'workflow-section-title no-collapse';
+            stepsTitle.textContent = 'Steps (Build Order)';
+            const stepsContent = document.createElement('div');
+            stepsContent.className = 'workflow-section-content';
+            const stepsList = document.createElement('ol');
+            stepsList.className = 'workflow-steps';
+            workflow.steps.forEach(step => {
                 const li = document.createElement('li');
-                li.textContent = `• ${input}`;
-                li.style.marginBottom = '0.5rem';
-                inputsList.appendChild(li);
+                li.innerHTML = step.replace(/\n/g, '<br>');
+                stepsList.appendChild(li);
             });
-            inputsContent.appendChild(inputsList);
-            inputs.appendChild(inputsTitle);
-            inputs.appendChild(inputsContent);
-            cardContent.appendChild(inputs);
-        }
-        cardContent.appendChild(steps);
-        cardContent.appendChild(exit);
-        cardContent.appendChild(tests);
+            stepsContent.appendChild(stepsList);
+            steps.appendChild(stepsTitle);
+            steps.appendChild(stepsContent);
 
-        card.appendChild(cardContent);
+            const exit = document.createElement('div');
+            exit.className = 'workflow-section';
+            const exitTitle = document.createElement('div');
+            exitTitle.className = 'workflow-section-title no-collapse';
+            exitTitle.textContent = 'Exit Criteria';
+            const exitContent = document.createElement('div');
+            exitContent.className = 'workflow-section-content';
+            const exitList = document.createElement('ul');
+            exitList.style.listStyle = 'none';
+            exitList.style.paddingLeft = '0';
+            workflow.exitCriteria.forEach(criteria => {
+                const li = document.createElement('li');
+                li.textContent = `✓ ${criteria}`;
+                li.style.marginBottom = '0.5rem';
+                exitList.appendChild(li);
+            });
+            exitContent.appendChild(exitList);
+            exit.appendChild(exitTitle);
+            exit.appendChild(exitContent);
 
-        container.appendChild(card);
+            const tests = document.createElement('div');
+            tests.className = 'workflow-section';
+            const testsTitle = document.createElement('div');
+            testsTitle.className = 'workflow-section-title no-collapse';
+            testsTitle.textContent = 'Test Cases';
+            const testsContent = document.createElement('div');
+            testsContent.className = 'workflow-section-content';
+            const testsList = document.createElement('ul');
+            testsList.style.listStyle = 'none';
+            testsList.style.paddingLeft = '0';
+            workflow.testCases.forEach(test => {
+                const li = document.createElement('li');
+                li.textContent = `✓ ${test}`;
+                li.style.marginBottom = '0.5rem';
+                testsList.appendChild(li);
+            });
+            testsContent.appendChild(testsList);
+            tests.appendChild(testsTitle);
+            tests.appendChild(testsContent);
 
-        // Load saved state
-        const saved = localStorage.getItem(`workflow-${workflow.id}`);
-        if (saved === 'true') {
-            checkbox.checked = true;
-            card.classList.add('completed');
-        }
+            const cardContent = document.createElement('div');
+            cardContent.className = 'workflow-card-content';
+
+            card.appendChild(header);
+            cardContent.appendChild(goal);
+            cardContent.appendChild(trigger);
+            if (workflow.inputs) {
+                const inputs = document.createElement('div');
+                inputs.className = 'workflow-section';
+                const inputsTitle = document.createElement('div');
+                inputsTitle.className = 'workflow-section-title no-collapse';
+                inputsTitle.textContent = 'Required Inputs';
+                const inputsContent = document.createElement('div');
+                inputsContent.className = 'workflow-section-content';
+                const inputsList = document.createElement('ul');
+                inputsList.style.listStyle = 'none';
+                inputsList.style.paddingLeft = '0';
+                workflow.inputs.forEach(input => {
+                    const li = document.createElement('li');
+                    li.textContent = `• ${input}`;
+                    li.style.marginBottom = '0.5rem';
+                    inputsList.appendChild(li);
+                });
+                inputsContent.appendChild(inputsList);
+                inputs.appendChild(inputsTitle);
+                inputs.appendChild(inputsContent);
+                cardContent.appendChild(inputs);
+            }
+            cardContent.appendChild(steps);
+            cardContent.appendChild(exit);
+            cardContent.appendChild(tests);
+
+            card.appendChild(cardContent);
+
+            // Load saved state
+            const saved = localStorage.getItem(`workflow-${workflow.id}`);
+            if (saved === 'true') {
+                checkbox.checked = true;
+                card.classList.add('completed');
+            }
+
+            categoryContent.appendChild(card);
+        });
+
+        categoryDiv.appendChild(categoryContent);
+        container.appendChild(categoryDiv);
     });
 }
 
