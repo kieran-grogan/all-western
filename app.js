@@ -31,6 +31,52 @@ const customFields = {
             { name: 'CF – Loan Amount', type: 'Currency or Number' },
             { name: 'CF – Purchase Price', type: 'Currency or Number', optional: true }
         ]
+    },
+    'D': {
+        title: 'Blend Identifiers / State (Post-App)',
+        fields: [
+            { name: 'CF – Blend Application ID', type: 'Single line text' },
+            { name: 'CF – Blend Last Event Type', type: 'Single line text' },
+            { name: 'CF – Blend Credit Pulled', type: 'Checkbox' },
+            { name: 'CF – Blend SSN Entered', type: 'Checkbox' },
+            { name: 'CF – Blend App Status', type: 'Dropdown', values: 'started, in_progress, completed, archived, unknown' },
+            { name: 'CF – Preferred Language (Blend)', type: 'Dropdown', values: 'English, Spanish, Other, Unknown' }
+        ]
+    },
+    'E': {
+        title: 'Credit Review / Decisioning',
+        fields: [
+            { name: 'CF – Credit Review Status', type: 'Dropdown', values: 'pending, complete, failed' },
+            { name: 'CF – Credit Worthy', type: 'Dropdown', values: 'yes, no, unknown' },
+            { name: 'CF – Credit Summary (AI)', type: 'Multi-line text' },
+            { name: 'CF – Credit Review Timestamp', type: 'Date & Time' }
+        ]
+    },
+    'F': {
+        title: 'Documentation Tracking',
+        fields: [
+            { name: 'CF – Docs Requested Timestamp', type: 'Date & Time' },
+            { name: 'CF – Docs Received Timestamp', type: 'Date & Time' },
+            { name: 'CF – Docs Followup Stage', type: 'Dropdown', values: 'none, 24h_sent, 36h_sent, 2day_cadence, closed_out' },
+            { name: 'CF – Docs Last Followup Timestamp', type: 'Date & Time' }
+        ]
+    },
+    'G': {
+        title: 'Pre-Approval Workflow Tracking',
+        fields: [
+            { name: 'CF – PreApproval LO Request Status', type: 'Dropdown', values: 'not_started, in_progress, submitted' },
+            { name: 'CF – PreApproval LO Request Timestamp', type: 'Date & Time' },
+            { name: 'CF – PreApproval Jason Review Status', type: 'Dropdown', values: 'not_started, in_review, needs_more_info, approved, declined' },
+            { name: 'CF – PreApproval Jason Review Timestamp', type: 'Date & Time' }
+        ]
+    },
+    'H': {
+        title: 'Routing / Ownership Helpers',
+        fields: [
+            { name: 'CF – Source Type', type: 'Dropdown', values: 'lead, not_from_lead, unknown' },
+            { name: 'CF – LO User ID (Assigned)', type: 'Single line text' },
+            { name: 'CF – LO Email (Assigned)', type: 'Single line text' }
+        ]
     }
 };
 
@@ -43,7 +89,24 @@ const tags = [
     'SLA | Gate Active',
     'LANG | Spanish',
     'DNC | Requested',
-    'DATA | Missing Loan Amount'
+    'DATA | Missing Loan Amount',
+    'POSTAPP | Entered',
+    'POSTAPP | Credit Review Pending',
+    'POSTAPP | Credit Review Complete',
+    'POSTAPP | Credit Worthy - Yes',
+    'POSTAPP | Credit Worthy - No',
+    'DOCS | Requested',
+    'DOCS | Received',
+    'DOCS | Followup 24h',
+    'DOCS | Followup 36h',
+    'DOCS | Nurture',
+    'PREAPPROVAL | LO Request Pending',
+    'PREAPPROVAL | LO Request Submitted',
+    'PREAPPROVAL | Jason Review Pending',
+    'PREAPPROVAL | Jason Needs More Info',
+    'PREAPPROVAL | Approved',
+    'PREAPPROVAL | Declined',
+    'REFI | Review Requested'
 ];
 
 const claimPageSteps = [
@@ -332,6 +395,254 @@ const workflows = [
         testCases: [
             '"not ready / wrong person / stop" routes correctly'
         ]
+    },
+    {
+        id: 'WF-POSTAPP-01',
+        name: 'Blend Credit Pull / App Taken Ingest',
+        subtitle: 'Enter Post-App Pipeline',
+        goal: 'When Blend indicates credit pulled or app taken, move to Post-App pipeline, trigger credit review, and stop old workflows.',
+        trigger: 'Incoming Webhook (event_type = credit_pulled) OR Tag Added "BLEND | Credit Pulled"',
+        steps: [
+            'Guardrail: If tag "POSTAPP | Entered" exists → Stop',
+            'Set tracking: Add tags "POSTAPP | Entered", "POSTAPP | Credit Review Pending"; Set CF – Credit Review Status = pending',
+            'Create/Update Opportunity: Pipeline "Post App – Working – Not Yet Converted", Stage "Automated Credit Review"',
+            'Stop old workflows: Remove from Lead Intake / Pre-App monitoring',
+            'Trigger credit review mini-app: Webhook (outbound)',
+            'Wait for completion: Wait until CF – Credit Review Status = complete (Timeout: 10m)',
+            'Route based on Credit Worthy: If Yes → WF-POSTAPP-02; If No → Nurture'
+        ],
+        exitCriteria: [
+            'Opportunity in Post-App pipeline',
+            'Credit review triggered and result processed'
+        ],
+        testCases: [
+            'Credit pull event triggers workflow',
+            'Duplicate events rejected',
+            'Credit worthy Yes/No routing works'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-02',
+        name: 'Route to "Application Taken" Stages',
+        subtitle: 'Unengaged / Engaged / Not-from-a-lead',
+        goal: 'Route the opportunity to the correct stage based on source type and engagement history.',
+        trigger: 'Child workflow started by WF-POSTAPP-01 OR Blend "app completed" webhook',
+        steps: [
+            'Determine Source Type: If "not_from_lead" → Stage "Application Taken - Not from a Lead", Add to WF-POSTAPP-03A',
+            'Determine Engagement State: If inbound SMS/call/reply exists → Stage "Application Taken - Engaged", Add to WF-POSTAPP-04',
+            'Else → Stage "Application Taken - Unengaged", Add to WF-POSTAPP-03'
+        ],
+        exitCriteria: [
+            'Opportunity moved to correct Application Taken stage',
+            'Next workflow started'
+        ],
+        testCases: [
+            'Not-from-lead routing',
+            'Engaged vs Unengaged routing'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-03',
+        name: 'Unengaged Claim + Watch',
+        subtitle: 'Application Taken Unengaged',
+        goal: 'If unassigned, blast to LOs. Watch for engagement to move to Engaged stage.',
+        trigger: 'Started by WF-POSTAPP-02 OR Stage change to "Application Taken - Unengaged"',
+        steps: [
+            'Assignment check: If unassigned → Add to WF-CLAIM-01 (Application Blast)',
+            'Engagement watch: Wait up to 7 days for Reply/Call',
+            'On engagement: Move to "Application Taken - Engaged", Add to WF-POSTAPP-04',
+            'Timeout: Add tag "POSTAPP | Still Unengaged"'
+        ],
+        exitCriteria: [
+            'Claim blast sent if needed',
+            'Moves to Engaged on reply'
+        ],
+        testCases: [
+            'Unassigned triggers blast',
+            'Reply triggers move to Engaged'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-03A',
+        name: 'Not-from-a-lead Auto-assign',
+        subtitle: 'Application Taken Not from a Lead',
+        goal: 'Assign to the correct LO based on Blend data and skip AI if requested.',
+        trigger: 'Stage change to "Application Taken - Not from a Lead"',
+        steps: [
+            'Identify LO from Blend data',
+            'Assign Contact Owner',
+            'Skip AI (optional)',
+            'Move to "Application Taken - Engaged", Add to WF-POSTAPP-04'
+        ],
+        exitCriteria: [
+            'LO assigned',
+            'Moved to Engaged path'
+        ],
+        testCases: [
+            'LO assignment works'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-04',
+        name: 'Engaged -> Wait for Docs',
+        subtitle: 'Application Taken Engaged',
+        goal: 'Wait for Blend to request docs. If already requested, move forward immediately.',
+        trigger: 'Stage change to "Application Taken - Engaged"',
+        steps: [
+            'Check if docs already requested: If yes → Move to "Borrower Docs Requested - Auto", Add to WF-POSTAPP-10',
+            'Wait for doc request event: Wait for tag "DOCS | Requested" (Timeout: 48h)',
+            'Timeout: Create LO task "Check Blend: docs request not detected"'
+        ],
+        exitCriteria: [
+            'Moves to Docs Requested stage when event occurs'
+        ],
+        testCases: [
+            'Immediate move if docs already requested',
+            'Wait works'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-05',
+        name: 'Blend Docs Requested Ingest',
+        subtitle: 'Docs Requested Auto',
+        goal: 'Ingest Blend documentation request event and start the timer.',
+        trigger: 'Incoming Webhook (Blend documentation event created)',
+        steps: [
+            'Set CF – Docs Requested Timestamp = now',
+            'Add tag "DOCS | Requested"',
+            'Move stage → "Borrower Docs Requested - Auto"',
+            'Add to WF-POSTAPP-10 (Docs Requested Timer)'
+        ],
+        exitCriteria: [
+            'Stage updated',
+            'Timer started'
+        ],
+        testCases: [
+            'Webhook triggers workflow'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-07',
+        name: 'Blend Docs Uploaded Ingest',
+        subtitle: 'Docs Received',
+        goal: 'Handle docs uploaded event, stop timer, and notify LO.',
+        trigger: 'Incoming Webhook (Documents uploaded by Prospect)',
+        steps: [
+            'Set CF – Docs Received Timestamp = now, CF – Docs Followup Stage = closed_out',
+            'Add tag "DOCS | Received"',
+            'Move stage → "Borrower Docs Received"',
+            'Stop WF-POSTAPP-10',
+            'Notify LO (Internal Email)',
+            'Move stage → "Pending LO Pre-Approval Request"',
+            'Create Task for LO: "Complete LO Pre-Approval Request checklist"'
+        ],
+        exitCriteria: [
+            'Timer stopped',
+            'LO notified',
+            'Task created'
+        ],
+        testCases: [
+            'Docs upload stops timer',
+            'Moves to Pre-Approval Request stage'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-10',
+        name: 'Docs Requested Timer',
+        subtitle: '24h + 36h + 2-day cadence',
+        goal: 'Nudge borrower to upload docs. Stop if docs received.',
+        trigger: 'Started by WF-POSTAPP-05 OR Stage change to Docs Requested',
+        steps: [
+            'Wait 24 hours (Stop if DOCS | Received)',
+            '24h nudge: SMS borrower, Set CF – Docs Followup Stage = 24h_sent',
+            'Wait 12 more hours (Total 36h)',
+            '36h escalation: Move stage "Not received after 36 hours", SMS borrower, Email LO',
+            '2-day cadence loop: Wait 48h, Remind, Repeat (up to 14 days)'
+        ],
+        exitCriteria: [
+            'Stops when docs received',
+            'Nudges sent on schedule'
+        ],
+        testCases: [
+            '24h nudge sent',
+            '36h escalation happens',
+            'Stops on docs received'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-20',
+        name: 'LO Pre-Approval Request Form -> Jason Queue',
+        subtitle: 'Operational Handoff',
+        goal: 'Route LO request to Jason for review.',
+        trigger: 'Form Submitted: FORM-LO-PREAPPROVAL-REQUEST',
+        steps: [
+            'Tag/Field updates: Submitted status',
+            'Move stage → "Pre-Approval Review - Jason Work Assignment"',
+            'Create Task for Jason: "Pre-Approval Review"',
+            'Email Jason with details'
+        ],
+        exitCriteria: [
+            'Jason notified',
+            'Task created'
+        ],
+        testCases: [
+            'Form submit routes to Jason'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-30',
+        name: 'Jason Write-Up Form -> Decision Routing',
+        subtitle: 'Decision Execution',
+        goal: 'Route based on Jason\'s decision (Approved, Needs Info, Declined).',
+        trigger: 'Form Submitted: FORM-JASON-PREAPPROVAL-WRITEUP',
+        steps: [
+            'Branch on Decision:',
+            '  • Approved: Move to "Pre-Approval Issued", Notify LO',
+            '  • Needs Info: Move to "Pre-Approval Wait - LO Work Assignment", Task for LO',
+            '  • Declined: Move to Nurture, Notify LO'
+        ],
+        exitCriteria: [
+            'Moved to correct post-decision stage'
+        ],
+        testCases: [
+            'Approved path',
+            'Needs Info path'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-40',
+        name: 'Refinance Review Request',
+        subtitle: 'Refi Queue',
+        goal: 'Route refi requests to Jason.',
+        trigger: 'Tag "REFI | Review Requested" OR Form Submitted',
+        steps: [
+            'Move stage → "Refinance Review - Jason Work Assignment"',
+            'Create Task for Jason',
+            'Email Jason'
+        ],
+        exitCriteria: [
+            'Jason notified'
+        ],
+        testCases: [
+            'Refi request routes correctly'
+        ]
+    },
+    {
+        id: 'WF-POSTAPP-90',
+        name: 'Nurture Routing (Placeholder)',
+        subtitle: 'Not Credit Worthy / Docs Never Received',
+        goal: 'Move rejected/stalled leads to nurture.',
+        trigger: 'Various rejection points',
+        steps: [
+            'Move to Nurture Pipeline/Stage',
+            'Apply tag-based status'
+        ],
+        exitCriteria: [
+            'Lead moved to nurture'
+        ],
+        testCases: [
+            'Routing works'
+        ]
     }
 ];
 
@@ -343,7 +654,13 @@ const implementationOrder = [
     { id: 'impl-5', title: 'Build WF-BLEND-01', description: 'Blend ingest workflow' },
     { id: 'impl-6', title: 'Build WF-BLEND-02 and WF-BLEND-03', description: 'Monitor + Inactivity workflows' },
     { id: 'impl-7', title: 'Build Spanish routing + DNC + data sync workflows', description: 'WF-LANG-01, WF-DNC-01, WF-DATA-01, WF-DATA-02, WF-LEAD-01' },
-    { id: 'impl-8', title: 'Run tests', description: 'Complete Section 7 test plan' }
+    { id: 'impl-8', title: 'Create Post-App Pipeline C + Stages', description: 'Create "Post App – Working – Not Yet Converted" pipeline and all 14 stages.' },
+    { id: 'impl-9', title: 'Create Post-App Fields, Tags, Custom Values', description: 'Add new sections D, E, F, G, H to Custom Fields and create new Tags.' },
+    { id: 'impl-10', title: 'Build Post-App Forms', description: 'Build "LO Pre-Approval Request", "Jason Pre-Approval Write-Up", and "Refi Review Request" forms.' },
+    { id: 'impl-11', title: 'Build Ingest & Routing Workflows', description: 'WF-POSTAPP-01, 02, 03, 03A' },
+    { id: 'impl-12', title: 'Build Docs Tracking Workflows', description: 'WF-POSTAPP-04, 05, 07, 10' },
+    { id: 'impl-13', title: 'Build Pre-Approval & Refi Workflows', description: 'WF-POSTAPP-20, 30, 40' },
+    { id: 'impl-14', title: 'Run tests', description: 'Complete Section 7 test plan' }
 ];
 
 const testCases = [
@@ -429,7 +746,7 @@ const gotchas = [
 ];
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeChecklists();
     initializeWorkflows();
     initializeTests();
@@ -437,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeImplementationOrder();
     loadSavedCheckboxStates();
     updateProgress();
-    
+
     // Initialize Mermaid diagrams after page load
     // Mermaid will auto-render with startOnLoad: true, but we'll also manually render visible ones
     setTimeout(() => {
@@ -459,23 +776,23 @@ function switchTab(tabName, element) {
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Remove active class from all tab buttons
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.classList.remove('active');
     });
-    
+
     // Show selected tab content
     const selectedTab = document.getElementById(`tab-${tabName}`);
     if (selectedTab) {
         selectedTab.classList.add('active');
     }
-    
+
     // Add active class to clicked button
     if (element) {
         element.classList.add('active');
     }
-    
+
     // Reinitialize Mermaid diagrams for the new tab
     setTimeout(() => {
         renderVisibleMermaidDiagrams();
@@ -487,7 +804,7 @@ function toggleSubSection(titleElement) {
     if (section) {
         const wasCollapsed = section.classList.contains('collapsed');
         section.classList.toggle('collapsed');
-        
+
         // If section was expanded, re-render Mermaid diagrams after a short delay
         if (wasCollapsed) {
             setTimeout(() => {
@@ -514,48 +831,48 @@ function initializeChecklists() {
     // Custom Fields
     const fieldsChecklist = document.getElementById('fields-checklist');
     let fieldIndex = 0;
-    
+
     Object.keys(customFields).forEach(key => {
         const category = customFields[key];
         const categoryDiv = document.createElement('div');
         categoryDiv.className = 'workflow-section collapsed';
         if (fieldIndex > 0) categoryDiv.classList.add('mt-2');
-        
+
         const categoryTitle = document.createElement('div');
         categoryTitle.className = 'workflow-section-title';
         categoryTitle.textContent = `(${key}) ${category.title}`;
-        categoryTitle.onclick = function() { toggleSubSection(this); };
+        categoryTitle.onclick = function () { toggleSubSection(this); };
         categoryDiv.appendChild(categoryTitle);
-        
+
         const fieldsWrapper = document.createElement('div');
         fieldsWrapper.className = 'workflow-section-content-wrapper';
-        
+
         category.fields.forEach(field => {
             const item = document.createElement('div');
             item.className = 'checklist-item';
             item.setAttribute('data-id', `field-${field.name.replace(/\s/g, '-').toLowerCase()}`);
-            
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.onchange = updateProgress;
-            
+
             const content = document.createElement('div');
             content.className = 'checklist-item-content';
-            
+
             const title = document.createElement('div');
             title.className = 'checklist-item-title';
             title.innerHTML = `<strong>${field.name}</strong> ${field.optional ? '<span class="badge badge-optional">Optional</span>' : ''}`;
-            
+
             const desc = document.createElement('div');
             desc.className = 'checklist-item-description';
             desc.innerHTML = `<strong>Type:</strong> ${field.type}${field.values ? `<br><strong>Values:</strong> ${field.values}` : ''}${field.note ? `<br><em>${field.note}</em>` : ''}`;
-            
+
             content.appendChild(title);
             content.appendChild(desc);
             item.appendChild(checkbox);
             item.appendChild(content);
             fieldsWrapper.appendChild(item);
-            
+
             // Load saved state
             const saved = localStorage.getItem(item.getAttribute('data-id'));
             if (saved === 'true') {
@@ -563,35 +880,35 @@ function initializeChecklists() {
                 item.classList.add('completed');
             }
         });
-        
+
         categoryDiv.appendChild(fieldsWrapper);
         fieldsChecklist.appendChild(categoryDiv);
         fieldIndex++;
     });
-    
+
     // Tags
     const tagsChecklist = document.getElementById('tags-checklist');
     tags.forEach(tag => {
         const item = document.createElement('div');
         item.className = 'checklist-item';
         item.setAttribute('data-id', `tag-${tag.replace(/\s/g, '-').toLowerCase()}`);
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.onchange = updateProgress;
-        
+
         const content = document.createElement('div');
         content.className = 'checklist-item-content';
-        
+
         const title = document.createElement('div');
         title.className = 'checklist-item-title';
         title.textContent = tag;
-        
+
         content.appendChild(title);
         item.appendChild(checkbox);
         item.appendChild(content);
         tagsChecklist.appendChild(item);
-        
+
         // Load saved state
         const saved = localStorage.getItem(item.getAttribute('data-id'));
         if (saved === 'true') {
@@ -599,35 +916,35 @@ function initializeChecklists() {
             item.classList.add('completed');
         }
     });
-    
+
     // Claim Page Steps
     const claimChecklist = document.getElementById('claim-checklist');
     claimPageSteps.forEach(step => {
         const item = document.createElement('div');
         item.className = 'checklist-item';
         item.setAttribute('data-id', step.id);
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.onchange = updateProgress;
-        
+
         const content = document.createElement('div');
         content.className = 'checklist-item-content';
-        
+
         const title = document.createElement('div');
         title.className = 'checklist-item-title';
         title.textContent = step.title;
-        
+
         const desc = document.createElement('div');
         desc.className = 'checklist-item-description';
         desc.innerHTML = step.description;
-        
+
         content.appendChild(title);
         content.appendChild(desc);
         item.appendChild(checkbox);
         item.appendChild(content);
         claimChecklist.appendChild(item);
-        
+
         // Load saved state
         const saved = localStorage.getItem(item.getAttribute('data-id'));
         if (saved === 'true') {
@@ -639,22 +956,22 @@ function initializeChecklists() {
 
 function initializeWorkflows() {
     const container = document.getElementById('workflows-container');
-    
+
     workflows.forEach(workflow => {
         const card = document.createElement('div');
         card.className = 'workflow-card collapsed';
         card.setAttribute('data-id', workflow.id);
-        
+
         const header = document.createElement('div');
         header.className = 'workflow-header';
-        header.onclick = function() {
+        header.onclick = function () {
             card.classList.toggle('collapsed');
         };
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'workflow-header-checkbox';
-        checkbox.onchange = function(e) {
+        checkbox.onchange = function (e) {
             e.stopPropagation();
             if (this.checked) {
                 card.classList.add('completed');
@@ -663,16 +980,16 @@ function initializeWorkflows() {
             }
             updateProgress();
         };
-        checkbox.onclick = function(e) {
+        checkbox.onclick = function (e) {
             e.stopPropagation();
         };
-        
+
         const headerLeft = document.createElement('div');
         headerLeft.className = 'workflow-header-left';
-        
+
         const headerContent = document.createElement('div');
         headerContent.className = 'workflow-header-content';
-        
+
         const id = document.createElement('div');
         id.className = 'workflow-id';
         id.textContent = workflow.id;
@@ -687,12 +1004,12 @@ function initializeWorkflows() {
         }
         headerContent.appendChild(id);
         headerContent.appendChild(title);
-        
+
         headerLeft.appendChild(checkbox);
         headerLeft.appendChild(headerContent);
-        
+
         header.appendChild(headerLeft);
-        
+
         const goal = document.createElement('div');
         goal.className = 'workflow-section';
         const goalTitle = document.createElement('div');
@@ -703,7 +1020,7 @@ function initializeWorkflows() {
         goalContent.textContent = workflow.goal;
         goal.appendChild(goalTitle);
         goal.appendChild(goalContent);
-        
+
         const trigger = document.createElement('div');
         trigger.className = 'workflow-section';
         const triggerTitle = document.createElement('div');
@@ -714,7 +1031,7 @@ function initializeWorkflows() {
         triggerContent.textContent = workflow.trigger;
         trigger.appendChild(triggerTitle);
         trigger.appendChild(triggerContent);
-        
+
         const steps = document.createElement('div');
         steps.className = 'workflow-section';
         const stepsTitle = document.createElement('div');
@@ -732,7 +1049,7 @@ function initializeWorkflows() {
         stepsContent.appendChild(stepsList);
         steps.appendChild(stepsTitle);
         steps.appendChild(stepsContent);
-        
+
         const exit = document.createElement('div');
         exit.className = 'workflow-section';
         const exitTitle = document.createElement('div');
@@ -752,7 +1069,7 @@ function initializeWorkflows() {
         exitContent.appendChild(exitList);
         exit.appendChild(exitTitle);
         exit.appendChild(exitContent);
-        
+
         const tests = document.createElement('div');
         tests.className = 'workflow-section';
         const testsTitle = document.createElement('div');
@@ -772,10 +1089,10 @@ function initializeWorkflows() {
         testsContent.appendChild(testsList);
         tests.appendChild(testsTitle);
         tests.appendChild(testsContent);
-        
+
         const cardContent = document.createElement('div');
         cardContent.className = 'workflow-card-content';
-        
+
         card.appendChild(header);
         cardContent.appendChild(goal);
         cardContent.appendChild(trigger);
@@ -804,11 +1121,11 @@ function initializeWorkflows() {
         cardContent.appendChild(steps);
         cardContent.appendChild(exit);
         cardContent.appendChild(tests);
-        
+
         card.appendChild(cardContent);
-        
+
         container.appendChild(card);
-        
+
         // Load saved state
         const saved = localStorage.getItem(`workflow-${workflow.id}`);
         if (saved === 'true') {
@@ -820,33 +1137,33 @@ function initializeWorkflows() {
 
 function initializeImplementationOrder() {
     const container = document.getElementById('implementation-checklist');
-    
+
     implementationOrder.forEach(item => {
         const div = document.createElement('div');
         div.className = 'checklist-item';
         div.setAttribute('data-id', item.id);
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.onchange = updateProgress;
-        
+
         const content = document.createElement('div');
         content.className = 'checklist-item-content';
-        
+
         const title = document.createElement('div');
         title.className = 'checklist-item-title';
         title.textContent = item.title;
-        
+
         const desc = document.createElement('div');
         desc.className = 'checklist-item-description';
         desc.textContent = item.description;
-        
+
         content.appendChild(title);
         content.appendChild(desc);
         div.appendChild(checkbox);
         div.appendChild(content);
         container.appendChild(div);
-        
+
         // Load saved state
         const saved = localStorage.getItem(item.id);
         if (saved === 'true') {
@@ -858,38 +1175,38 @@ function initializeImplementationOrder() {
 
 function initializeTests() {
     const container = document.getElementById('tests-container');
-    
+
     testCases.forEach(test => {
         const div = document.createElement('div');
         div.className = 'test-case';
         div.setAttribute('data-id', test.id);
-        
+
         const header = document.createElement('div');
         header.style.display = 'flex';
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'start';
         header.style.marginBottom = '0.75rem';
-        
+
         const title = document.createElement('div');
         title.className = 'test-case-title';
         title.textContent = test.title;
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.style.width = '20px';
         checkbox.style.height = '20px';
-        checkbox.onchange = function() {
+        checkbox.onchange = function () {
             updateProgress();
         };
-        
+
         header.appendChild(title);
         header.appendChild(checkbox);
-        
+
         const desc = document.createElement('div');
         desc.style.marginBottom = '1rem';
         desc.style.color = 'var(--text-light)';
         desc.textContent = test.description;
-        
+
         const steps = document.createElement('ul');
         steps.className = 'test-case-steps';
         test.checks.forEach(check => {
@@ -897,12 +1214,12 @@ function initializeTests() {
             li.textContent = check;
             steps.appendChild(li);
         });
-        
+
         div.appendChild(header);
         div.appendChild(desc);
         div.appendChild(steps);
         container.appendChild(div);
-        
+
         // Load saved state
         const saved = localStorage.getItem(`test-${test.id}`);
         if (saved === 'true') {
@@ -913,24 +1230,24 @@ function initializeTests() {
 
 function initializeGotchas() {
     const container = document.getElementById('gotchas-container');
-    
+
     gotchas.forEach((gotcha, index) => {
         const div = document.createElement('div');
         div.className = 'gotcha-item';
         div.setAttribute('data-id', `gotcha-${index}`);
-        
+
         const content = document.createElement('div');
         content.style.display = 'flex';
         content.style.alignItems = 'start';
         content.style.gap = '1rem';
-        
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.style.width = '20px';
         checkbox.style.height = '20px';
         checkbox.style.marginTop = '2px';
         checkbox.style.flexShrink = '0';
-        checkbox.onchange = function() {
+        checkbox.onchange = function () {
             if (this.checked) {
                 div.style.background = '#f0fdf4';
                 div.style.borderLeftColor = 'var(--success)';
@@ -940,15 +1257,15 @@ function initializeGotchas() {
             }
             updateProgress();
         };
-        
+
         const text = document.createElement('div');
         text.textContent = gotcha;
-        
+
         content.appendChild(checkbox);
         content.appendChild(text);
         div.appendChild(content);
         container.appendChild(div);
-        
+
         // Load saved state
         const saved = localStorage.getItem(`gotcha-${index}`);
         if (saved === 'true') {
@@ -983,7 +1300,7 @@ function updateProgress() {
             localStorage.setItem(`gotcha-${index}`, checkbox.checked);
         }
     });
-    
+
     // Update checklist item styles
     document.querySelectorAll('.checklist-item').forEach(item => {
         const checkbox = item.querySelector('input[type="checkbox"]');
@@ -993,7 +1310,7 @@ function updateProgress() {
             item.classList.remove('completed');
         }
     });
-    
+
     // Count completions by section
     const setupCount = countSection('setup');
     const claimCount = countSection('claim-page');
@@ -1001,19 +1318,19 @@ function updateProgress() {
     const implCount = countImplementation();
     const testCount = countTests();
     const gotchaCount = countGotchas();
-    
+
     // Update badges
     document.getElementById('setup-badge').textContent = `${setupCount.completed}/${setupCount.total}`;
     document.getElementById('claim-badge').textContent = `${claimCount.completed}/${claimCount.total}`;
     document.getElementById('workflow-badge').textContent = `${workflowCount.completed}/${workflowCount.total}`;
     document.getElementById('test-badge').textContent = `${testCount.completed}/${testCount.total}`;
     document.getElementById('gotcha-badge').textContent = `${gotchaCount.completed}/${gotchaCount.total}`;
-    
+
     // Calculate overall progress
     const totalItems = setupCount.total + claimCount.total + workflowCount.total + implCount.total + testCount.total + gotchaCount.total;
     const completedItems = setupCount.completed + claimCount.completed + workflowCount.completed + implCount.completed + testCount.completed + gotchaCount.completed;
     const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-    
+
     // Update progress bar
     document.getElementById('progress-fill').style.width = `${progress}%`;
     document.getElementById('progress-text').textContent = `${Math.round(progress)}% Complete (${completedItems}/${totalItems} items)`;
@@ -1025,11 +1342,11 @@ function countSection(sectionName) {
         'setup': 'tab-setup',
         'claim-page': 'tab-claim'
     };
-    
+
     const tabId = tabMap[sectionName] || `tab-${sectionName}`;
     const tab = document.getElementById(tabId);
     if (!tab) return { completed: 0, total: 0 };
-    
+
     const checkboxes = tab.querySelectorAll('input[type="checkbox"]');
     let completed = 0;
     checkboxes.forEach(cb => {

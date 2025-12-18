@@ -839,6 +839,32 @@ B -->|SSN DOB| C[WF-CLAIM-01 Blast]
 B -->|Inactive 45m| D[WF-BLEND-03 Call Blast]
 D --> E[Fallback SMS Revival Pool]</div>
                     </div>
+                    
+                    <div class="diagram-container">
+                        <div class="workflow-section-title" style="margin-bottom: 1rem;">Post-App Subsystem</div>
+                        <div class="mermaid">flowchart TD
+  A[Blend Credit Pull / App Taken] --> B[Stage: Automated Credit Review]
+  B --> C[Micro-app: Credit Summary + Credit Worthy?]
+  C -->|Yes| D[Stage: App Taken - Unengaged/Engaged Router]
+  C -->|No| Z[Nurture Pipeline]
+
+  D -->|Unengaged| E[Claim Blast (if unassigned)]
+  E --> F[Wait for Reply/Call]
+  F -->|Engaged| G[Stage: App Taken - Engaged]
+
+  G --> H[Wait for Docs Requested Event]
+  H --> I[Stage: Borrower Docs Requested - Auto/Curated]
+  I --> J[Timer: 24h nudge → 36h escalation → 2-day cadence]
+  J -->|Docs uploaded| K[Stage: Borrower Docs Received]
+  K --> L[Stage: Pending LO Pre-Approval Request]
+  L --> M[LO Checklist Form Submitted]
+  M --> N[Stage: Pre-Approval Review - Jason Work Assignment]
+  N --> O[Jason Write-up Form Submitted]
+  O -->|Approved| P[Post App - Pre-Approval Issued]
+  O -->|Needs info| Q[Stage: Pre-Approval Wait - LO Work Assignment]
+  Q --> L
+  O -->|Declined| Z</div>
+                    </div>
                     </div>
                 </div>
             </div>
