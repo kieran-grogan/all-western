@@ -134,6 +134,42 @@ const workflows = {
             {
                 id: 'blend-ingest',
                 name: 'Blend Event Ingest',
+                detailedGoal: `PURPOSE
+When Blend indicates a borrower started an application (Blend “user created” / “application started”), create or update the matching Contact + Opportunity in this GHL location, move them into the correct PRE-APP pipeline stage, and start the Blend monitoring + assignment logic.
+
+TRIGGER (use ONE of these depending on your integration)
+- Inbound Webhook from middleware: event = blend_user_created OR application_started
+OR
+- Contact Tag Added: “BLEND | App Started” (if middleware tags instead of webhooks)
+OR
+- Contact Custom Field Updated: “Blend App Status” changes to “in_progress”
+
+WHAT THIS WORKFLOW MUST DO (ACTIONS IN ORDER)
+1) Deduplicate / match:
+   - Find or create the Contact using Blend identifiers (email/phone) and store:
+     • CF: Blend Application ID
+     • CF: Blend Last Activity At (timestamp)
+     • CF: Blend Preferred Language (if provided)
+2) Set pipeline stage (Pre‑Application – Unassigned New):
+   - Update Opportunity → Pipeline = “Pre‑Application – Unassigned New”
+   - Stage = “Unassigned – Application Started – Actively Completing”
+   - If an opportunity already exists in Lead Intake, keep ONE and update that one (no duplicates).
+3) Send the first “started app” SMS to borrower:
+   - Send SMS: “I see you began your application… reply with any questions.” (exact copy can be edited)
+   - Add Tag: “PREAPP | Blend Started SMS Sent”
+4) Enroll into monitoring:
+   - Add Tag: “BLEND | Monitor Active”
+   - Add to workflow: “WF-BLEND-02 — Blend Monitoring Loop”
+5) Language pre-check:
+   - If CF Blend Preferred Language = Spanish (or not English), add Tag “LANG | Spanish” and add to “WF-LANG-01 — Spanish Routing”
+6) Guardrails:
+   - If this contact already has Tag “BLEND | App Completed” or is already in Post‑App pipeline, do nothing (exit).
+
+DEFINITION OF DONE
+- Contact is updated with Blend IDs + last activity
+- Opportunity exists and is in “Pre‑Application – Unassigned New” → “Unassigned – Application Started – Actively Completing”
+- Borrower received the “started app” SMS
+- Monitoring is active (tag + enrolled to WF-BLEND-02)`,
                 subtitle: 'User Created / App Started',
                 goal: 'When Blend emits "user created/app started", create/update the Contact + Opportunity, push them into the Blend pre-app path, send the initial SMS, and start monitoring.',
                 trigger: 'Inbound Webhook (recommended) from middleware with Blend payload OR internal Blend integration trigger',
@@ -160,6 +196,54 @@ const workflows = {
             {
                 id: 'blend-monitor',
                 name: 'Blend Monitoring Loop',
+                detailedGoal: `PURPOSE
+While the borrower is filling the Blend application, continuously monitor for key milestones:
+(A) SSN/DOB entered → trigger immediate assignment (Application Blast / Claim)
+(B) No activity for 45 minutes → trigger Call Blast revival
+(C) App completed / credit pulled → route to Post‑App pipeline
+This monitoring must stop as soon as the file exits the pre-app stage.
+
+TRIGGER
+- Tag Added: “BLEND | Monitor Active”
+OR
+- Opportunity stage becomes “Unassigned – Working on Application (Blend Monitoring)”
+(choose whichever you implemented in WF-BLEND-01)
+
+IMPORTANT IMPLEMENTATION NOTE
+GHL should NOT be responsible for polling Blend directly unless you already have a working webhook/action setup.
+Preferred: your middleware polls Blend every 5 minutes and updates GHL custom fields:
+- CF Blend Last Activity At
+- CF Blend SSN Entered (Yes/No) and/or CF Blend DOB Entered (Yes/No)
+- CF Blend App Completed (Yes/No)
+- CF Blend Credit Pulled (Yes/No)
+
+WHAT THIS WORKFLOW MUST DO
+1) Loop every 5 minutes:
+   - Wait 5 minutes
+   - If Tag “BLEND | Monitor Active” is missing → stop (exit)
+2) Check for completion:
+   - IF CF Blend App Completed = Yes OR CF Blend Credit Pulled = Yes
+     → Remove tag “BLEND | Monitor Active”
+     → Add tag “BLEND | App Completed”
+     → Add to workflow “WF-POSTAPP-01 — App Taken Ingest”
+     → Exit
+3) Check for SSN/DOB milestone (immediate assignment signal):
+   - IF CF Blend SSN Entered = Yes OR CF Blend DOB Entered = Yes
+     → Remove tag “BLEND | Monitor Active”
+     → Add tag “BLEND | SSN/DOB Captured”
+     → Add to workflow “WF-CLAIM-01 — Application Blast” (claim link)
+     → Exit
+4) Check inactivity threshold:
+   - IF current time - CF Blend Last Activity At >= 45 minutes
+     → Remove tag “BLEND | Monitor Active”
+     → Add tag “BLEND | Inactive 45m”
+     → Add to workflow “WF-BLEND-03 — Inactivity Branch”
+     → Exit
+5) Otherwise continue looping.
+
+DEFINITION OF DONE
+- Monitoring ends ONLY by one of: completion, SSN/DOB captured, or inactivity.
+- Contact is routed to the correct next workflow and monitor tag removed.`,
                 subtitle: 'Every 5 minutes',
                 goal: 'Poll for progress and route: SSN/DOB entered → assignment blast immediately; inactivity ≥45m → call blast',
                 trigger: 'Added to Workflow from "Blend Event Ingest"',
@@ -186,6 +270,35 @@ const workflows = {
             {
                 id: 'blend-inactivity',
                 name: 'Blend Inactivity Branch',
+                detailedGoal: `PURPOSE
+When the Blend applicant goes inactive for ~45 minutes, revive the application using a Call Blast attempt.
+If the call blast fails, send a fallback SMS and then leave them to be caught by your global revival/AI system later.
+
+TRIGGER
+- Tag Added: “BLEND | Inactive 45m”
+OR
+- Added by workflow WF-BLEND-02 when inactivity condition met
+
+WHAT THIS WORKFLOW MUST DO
+1) Move to a “not finished” visibility stage:
+   - Update Opportunity → Pipeline “Pre‑Application – Unassigned New”
+   - Stage = “App Started – Not Finished” (or your equivalent)
+2) Trigger Call Blast Micro:
+   - Add to workflow “CALLBLAST | Application Started Inactive” (your existing call blast micro)
+   - OR run a call blast action sequence if you built it inside this workflow
+3) If call blast unsuccessful (use your call blast workflow’s outcome tag/field):
+   - Send SMS to borrower: “Tried to reach you—want help finishing the app?”
+   - Add tag “BLEND | Revival SMS Sent”
+4) Exit and let global AI / nurture catch future replies.
+
+GUARDRAILS
+- Do not restart Blend monitoring automatically here unless Jason specifically wants continuous monitoring after revival.
+- Ensure you do not spam: if tag “BLEND | Revival SMS Sent” exists, do not send again.
+
+DEFINITION OF DONE
+- Call blast attempted
+- Borrower received fallback SMS only if call blast failed
+- Opportunity clearly shows “Not Finished” state`,
                 subtitle: '45 minutes',
                 goal: 'Revive stalled app: call blast, if unsuccessful → SMS follow-up, then return to general revival pool',
                 trigger: 'Added to workflow from "Blend Monitoring Loop" inactivity branch',
@@ -211,6 +324,37 @@ const workflows = {
             {
                 id: 'claim-blast',
                 name: 'Application Blast',
+                detailedGoal: `PURPOSE
+Notify all Loan Officers that a high-intent file is available and allow them to claim it using ONE shared link.
+All LOs receive the message at the same time to ensure fairness; the claim is processed on a single claim page inside GHL.
+
+TRIGGER
+- Added by workflows when assignment is needed:
+  • WF-BLEND-02 (SSN/DOB captured)
+  • WF-POSTAPP-03 (post-app unassigned)
+  • WF-GATE-01 (retarget after SLA failure)
+OR
+- Tag Added: “ASSIGN | Blast Needed”
+
+WHAT THIS WORKFLOW MUST DO
+1) Prepare claim link:
+   - Use one URL to the Claim Page
+   - Append contact id: ?cid={{contact.id}} (or use GHL merge field format)
+2) Send INTERNAL notification to all LOs (SMS or Email):
+   - Message must include:
+     • Borrower name, city/state, estimated loan amount
+     • Status context (e.g., “SSN captured / App started / App completed”)
+     • Claim link (single shared link)
+3) Add “blast sent” tracking:
+   - Add tag “ASSIGN | Blast Sent”
+   - Set CF “Assignment Blast Sent At” = now
+4) Optional fairness controls:
+   - If LO has “Recently Claimed” tag, exclude them (if you maintain a roster)
+   - If reassigning, store CF “Exclude LO User ID” for claim processor to enforce
+
+DEFINITION OF DONE
+- All intended LOs were notified with the same claim link
+- Contact is tagged/marked that a blast was sent (prevents duplicates)`,
                 subtitle: 'Send claim link to all LOs',
                 goal: 'Send a single message to all LOs with one claim link so everyone has equal response time and can see lead context before claiming.',
                 trigger: 'Added to workflow from "Blend Monitoring Loop" (SSN/DOB entered) OR from other flows',
@@ -234,6 +378,50 @@ const workflows = {
             {
                 id: 'claim-processor',
                 name: 'Claim Processor',
+                detailedGoal: `PURPOSE
+Process a claim submission from the LO Claim Page. The first valid claim wins:
+- Assign Contact Owner and Opportunity Owner to the claiming LO
+- Update the opportunity stage into the correct “Assigned” pipeline stage
+- Prevent all later claims from changing ownership
+
+TRIGGER
+- Form Submitted: “LO Claim Form” (embedded on the Claim Page)
+(Claim page should pass Contact ID and capture the LO’s user identity)
+
+WHAT THIS WORKFLOW MUST DO
+1) Identify claimant (LO):
+   - If using sticky contact, capture LO user id/email in the form submission
+   - Store claimant in:
+     • CF “Assigned LO User ID”
+     • CF “Assigned LO Name/Email”
+2) First-claim-wins lock:
+   - IF Contact Owner is already set OR CF “Assigned LO User ID” is not empty:
+     → Add tag “ASSIGN | Claim Rejected – Already Assigned”
+     → (Optional) Send internal notification to claimant “Already claimed”
+     → Exit
+3) Assign ownership:
+   - Set Contact Owner = claiming LO
+   - Update Opportunity Owner = claiming LO (same user)
+   - Set CF “Claimed At” = now
+   - Add tag “ASSIGN | Claimed”
+4) Stage placement (MOST IMPORTANT):
+   - If file is pre-app:
+     • Pipeline = “Pre‑Application – Assigned New”
+     • Stage = “Blend App Started – Unengaged” (or “SMS Engaged with AI” if borrower replied)
+   - If file is post-app:
+     • Pipeline = “Post App – Working – Not Yet Converted”
+     • Stage = “Application Taken – Unengaged” (until engagement happens)
+5) Start SLA gate:
+   - Add tag “SLA | Gate Active”
+   - Add to workflow “WF-GATE-01 — 30-minute LO First-Touch Gate”
+6) Notify internal:
+   - Send internal confirmation to claimant + ops channel (optional)
+
+DEFINITION OF DONE
+- Ownership is set to the LO
+- Opportunity is in the correct Assigned pipeline stage
+- SLA gate started (tag + workflow enrollment)
+- Later claims cannot override assignment`,
                 subtitle: 'First claim wins; assigns lead',
                 goal: 'Process claim submissions and award lead to the first claimant only. Move to Assigned pipeline and start the 30-min gate.',
                 trigger: 'Form Submitted (FORM – LO Claim Lead) OR Inbound Webhook',
@@ -263,6 +451,41 @@ const workflows = {
             {
                 id: 'gate-sla',
                 name: '30-minute LO First-Touch Gate',
+                detailedGoal: `PURPOSE
+Enforce LO accountability after a claim/assignment:
+If a LO claims a lead but does not send a message or complete a call within 30 minutes, automatically reassign the file to another LO (exclude the current LO) and email the original LO explaining why the lead was reassigned.
+
+TRIGGER
+- Tag Added: “SLA | Gate Active”
+(added by WF-CLAIM-02 or any assignment workflow)
+
+WHAT THIS WORKFLOW MUST DO
+1) Store who is currently assigned (for exclusion):
+   - CF “Exclude LO User ID” = current Contact Owner/User ID
+2) Wait up to 30 minutes for first touch completion:
+   - Wait until CF “LO First Touch Completed” = Yes
+   - Timeout = 30 minutes
+3) If first touch completed (condition met):
+   - Remove tag “SLA | Gate Active”
+   - Add tag “SLA | Passed”
+   - Exit
+4) If timeout occurs (no LO engagement):
+   - Add tag “SLA | Failed”
+   - Update Opportunity Stage (same pipeline) → “Retargeted to New LO (Exclude Current Assignment)”
+   - Trigger reassignment blast:
+     • Add tag “ASSIGN | Blast Needed”
+     • Add to workflow “WF-CLAIM-01 — Application Blast”
+   - Email the original LO with reason:
+     • Subject: “Lead Reassigned – No contact in 30 minutes”
+     • Include borrower name + timestamp + what to do next
+
+GUARDRAILS
+- Do NOT fire if opportunity is already advanced to Phone Engaged, Docs Received, or later stages.
+- Ensure the blast excludes the current LO (use CF Exclude LO User ID in claim processor/blast logic).
+
+DEFINITION OF DONE
+- Either SLA passed (first touch recorded) OR
+- SLA failed and file was retargeted + old LO notified`,
                 subtitle: 'LO accountability check',
                 goal: 'If LO does not engage within 30 minutes after claiming, reassign and notify them why.',
                 trigger: 'Tag Added: "SLA | Gate Active" (Added at end of Claim Processor)',
@@ -290,6 +513,33 @@ const workflows = {
             {
                 id: 'gate-mark-touch',
                 name: 'Mark First Touch',
+                detailedGoal: `PURPOSE
+Detect the LO’s first real engagement after a file is assigned and record it in custom fields so SLA workflows can stop.
+This workflow must also advance the opportunity to the correct “LO engaged” stage (SMS vs Phone).
+
+TRIGGERS (build as ONE workflow with multiple triggers OR as two micro workflows)
+A) LO sends an outbound SMS inside GHL (message sent by assigned user to contact)
+B) Call transcript generated / call completed inside GHL (connected call)
+
+WHAT THIS WORKFLOW MUST DO (for BOTH triggers)
+1) Mark first touch:
+   - Update Contact:
+     • CF “LO First Touch Completed” = Yes
+     • CF “LO First Touch At” = now
+   - Remove tag “SLA | Gate Active”
+2) Update stage (depends on engagement type):
+   - If trigger A (LO SMS):
+     • Update Opportunity → Pipeline “Pre‑Application – Assigned New”
+     • Stage = “SMS Engaged with LO” OR “Blend App Started – Engaged with LO” (use your stage naming)
+   - If trigger B (call transcript/connected call):
+     • Update Opportunity → same pipeline
+     • Stage = “Phone Engaged with LO”
+3) Idempotency:
+   - If CF “LO First Touch Completed” is already Yes, do nothing (exit)
+
+DEFINITION OF DONE
+- First touch fields are set and SLA tag removed
+- Opportunity stage reflects LO engagement (SMS or Phone)`,
                 subtitle: 'How to set "LO First Touch Completed"',
                 goal: 'When LO actually engages (message or real call), mark first touch complete and move stages for analytics.',
                 trigger: 'Task Completed (task title contains "FIRST TOUCH REQUIRED") OR Transcript Generated',
@@ -317,6 +567,35 @@ const workflows = {
             {
                 id: 'postapp-ingest',
                 name: 'Blend Credit Pull / App Taken Ingest',
+                detailedGoal: `PURPOSE
+When Blend indicates a file has reached “application taken” status (credit pulled OR SSN/DOB captured OR app completed), move the record into the Post‑App pipeline and start automated credit review + routing.
+
+TRIGGERS
+- Inbound Webhook: credit_pulled OR ssn_captured OR application_completed
+OR
+- Tag Added: “BLEND | App Taken”
+OR
+- CF “Blend Credit Pulled” becomes Yes
+
+WHAT THIS WORKFLOW MUST DO
+1) Normalize stage/pipeline:
+   - Update Opportunity → Pipeline = “Post App – Working – Not Yet Converted”
+   - Stage = “Automated Credit Review”
+2) Store status:
+   - Add tag “POSTAPP | App Taken”
+   - Set CF “PostApp Started At” = now
+3) Kick off credit review mini-app (if implemented):
+   - Webhook to middleware/AI: send credit metadata / application id
+   - Store returned summary fields:
+     • CF “Credit Summary”
+     • CF “Credit Worthy” (Yes/No/Review)
+4) Route into the correct “Application Taken” stage:
+   - Add to workflow “WF-POSTAPP-02 — Route to Application Taken Stages”
+
+DEFINITION OF DONE
+- Opportunity is in Post-App pipeline at Automated Credit Review
+- Credit review initiated (or skipped with note)
+- Routed to stage router workflow`,
                 subtitle: 'Enter Post-App Pipeline',
                 goal: 'When Blend indicates credit pulled or app taken, move to Post-App pipeline, trigger credit review, and stop old workflows.',
                 trigger: 'Incoming Webhook (event_type = credit_pulled) OR Tag Added "BLEND | Credit Pulled"',
@@ -342,6 +621,37 @@ const workflows = {
             {
                 id: 'postapp-router',
                 name: 'Route to "Application Taken" Stages',
+                detailedGoal: `PURPOSE
+Decide which “Application Taken” path this file belongs to:
+(A) Not-from-a-lead (referral/LO-generated) → auto-assign to that LO
+(B) Engaged → move to Engaged path + docs tracking
+(C) Unengaged → claim/watch path + assignment if missing
+
+TRIGGER
+- Added by WF-POSTAPP-01 after credit/app-taken ingest
+OR
+- Opportunity stage becomes “Automated Credit Review”
+
+WHAT THIS WORKFLOW MUST DO
+1) Determine source / intended LO:
+   - If CF “Blend Originator Email/UserID” exists → Not-from-a-lead path
+2) Determine engagement state:
+   - If borrower has replied OR call transcript exists OR tag “POSTAPP | Engaged” exists → Engaged path
+   - Else → Unengaged path
+3) Route:
+   - Not-from-a-lead:
+     • Update Opportunity Stage = “Application Taken – Not from a Lead”
+     • Add to workflow “WF-POSTAPP-03A — Not-from-a-lead Auto-assign”
+   - Engaged:
+     • Update Opportunity Stage = “Application Taken – Engaged”
+     • Add to workflow “WF-POSTAPP-04 — Engaged → Wait for Docs”
+   - Unengaged:
+     • Update Opportunity Stage = “Application Taken – Unengaged”
+     • Add to workflow “WF-POSTAPP-03 — Unengaged Claim + Watch”
+
+DEFINITION OF DONE
+- Opportunity is in exactly one of the three stages
+- Correct downstream workflow started`,
                 subtitle: 'Unengaged / Engaged / Not-from-a-lead',
                 goal: 'Route the opportunity to the correct stage based on source type and engagement history.',
                 trigger: 'Child workflow started by "Blend Credit Pull / App Taken Ingest" OR Blend "app completed" webhook',
@@ -362,6 +672,40 @@ const workflows = {
             {
                 id: 'postapp-unengaged',
                 name: 'Unengaged Claim + Watch',
+                detailedGoal: `PURPOSE
+For post-app files where the borrower has not engaged (no reply, no connected call):
+- Ensure the file is assigned to a LO (blast claim if unassigned)
+- Monitor for engagement for up to 7 days
+- If engagement happens, advance to Engaged + start docs workflow
+- If no engagement, tag for reporting and/or route to nurture
+
+TRIGGER
+- Opportunity enters stage “Application Taken – Unengaged” in pipeline “Post App – Working – Not Yet Converted”
+OR
+- Added by WF-POSTAPP-02
+
+WHAT THIS WORKFLOW MUST DO
+1) Assignment check:
+   - If Contact Owner is empty:
+     • Add tag “ASSIGN | Blast Needed”
+     • Add to workflow “WF-CLAIM-01 — Application Blast”
+   - Else continue
+2) Watch for engagement WITHOUT using “wait for reply to step”:
+   - Wait until tag “POSTAPP | Engaged” exists OR call transcript exists
+   - Timeout = 7 days
+3) If engagement occurs:
+   - Update Opportunity Stage = “Application Taken – Engaged”
+   - Add to workflow “WF-POSTAPP-04 — Engaged → Wait for Docs”
+4) If timeout occurs:
+   - Add tag “POSTAPP | Still Unengaged”
+   - (Optional) Move to nurture stage/pipeline when defined
+
+IMPORTANT NOTE
+Create/enable the listener workflow (below) that sets tag “POSTAPP | Engaged” whenever the borrower replies or a connected call happens.
+
+DEFINITION OF DONE
+- Either file advances to Engaged and docs workflow starts
+- OR it is tagged Still Unengaged for nurture/reporting`,
                 subtitle: 'Application Taken Unengaged',
                 goal: 'If unassigned, blast to LOs. Watch for engagement to move to Engaged stage.',
                 trigger: 'Started by "Route to Application Taken Stages" OR Stage change to "Application Taken - Unengaged"',
@@ -383,6 +727,35 @@ const workflows = {
             {
                 id: 'postapp-autoassign',
                 name: 'Not-from-a-lead Auto-assign',
+                detailedGoal: `PURPOSE
+For referral / LO-generated applications (not from a paid lead source), auto-assign the file to the correct Loan Officer using Blend originator data and skip the public claim blast. Then place the file into the standard Engaged path for docs.
+
+TRIGGER
+- Opportunity enters stage “Application Taken – Not from a Lead” (Post App pipeline)
+OR
+- Added by WF-POSTAPP-02
+
+WHAT THIS WORKFLOW MUST DO
+1) Identify intended LO:
+   - Read CF “Blend Originator Email” or CF “Blend Originator UserID”
+2) Assign Contact Owner:
+   - Preferred: Webhook to middleware that maps originator email → GHL user id → sets Contact Owner
+   - If mapping is simple, you may use IF originator email = X THEN Assign to User X
+3) Skip AI if policy requires:
+   - Add tag “AI | Skip” OR remove from AI conversation workflows
+4) Normalize into Engaged state:
+   - Add tag “POSTAPP | Engaged”
+   - Update Opportunity Stage = “Application Taken – Engaged”
+   - Add to workflow “WF-POSTAPP-04 — Engaged → Wait for Docs”
+5) If LO identification is missing:
+   - Fallback to claim blast:
+     • Add tag “ASSIGN | Blast Needed”
+     • Add to workflow “WF-CLAIM-01 — Application Blast”
+
+DEFINITION OF DONE
+- Correct LO is assigned and file moved to Engaged + docs workflow started
+OR
+- Fallback blast triggered with internal tracking`,
                 subtitle: 'Application Taken Not from a Lead',
                 goal: 'Assign to the correct LO based on Blend data and skip AI if requested.',
                 trigger: 'Stage change to "Application Taken - Not from a Lead"',
@@ -408,6 +781,32 @@ const workflows = {
             {
                 id: 'postapp-engaged-docs',
                 name: 'Engaged -> Wait for Docs',
+                detailedGoal: `PURPOSE
+Once the borrower is engaged and the file is “Application Taken – Engaged”, track the documentation lifecycle:
+- Detect when Blend requests docs (auto or curated)
+- Start the docs timer workflow
+
+TRIGGER
+- Opportunity enters stage “Application Taken – Engaged” (Post App pipeline)
+
+WHAT THIS WORKFLOW MUST DO
+1) If docs request already recorded:
+   - If tag “DOCS | Requested” exists OR CF “Docs Requested At” is not empty:
+     • Update stage to “Borrower Docs Requested – Auto” (or Curated)
+     • Add to workflow “WF-POSTAPP-10 — Docs Timer”
+     • Exit
+2) Otherwise wait for docs requested signal:
+   - Wait until tag “DOCS | Requested” exists
+   - Timeout = 24 hours
+3) If docs requested appears:
+   - Update stage accordingly
+   - Start docs timer workflow
+4) If timeout occurs without docs requested:
+   - Create internal task for assigned LO: “Check Blend — confirm docs were requested”
+   - Keep stage as Engaged
+
+DEFINITION OF DONE
+- Docs requested is detected and docs timer started OR LO tasked to verify if signal missing`,
                 subtitle: 'Application Taken Engaged',
                 goal: 'Wait for Blend to request docs. If already requested, move forward immediately.',
                 trigger: 'Stage change to "Application Taken - Engaged"',
@@ -427,6 +826,28 @@ const workflows = {
             {
                 id: 'postapp-docs-ingest',
                 name: 'Blend Docs Requested Ingest',
+                detailedGoal: `PURPOSE
+When Blend automatically generates a borrower document request, stamp the file as “Docs Requested,” move the opportunity into the correct stage, notify the LO, and start the docs follow-up timer.
+
+TRIGGER (preferred)
+- Inbound Webhook from middleware: event = documentation.created (Blend)
+OR
+- Tag Added: “DOCS | Requested” (if middleware tags)
+
+WHAT THIS WORKFLOW MUST DO
+1) Update tracking:
+   - Set CF “Docs Requested At” = now
+   - Add tag “DOCS | Requested”
+2) Move stage:
+   - Pipeline = Post App – Working – Not Yet Converted
+   - Stage = “Borrower Docs Requested – Auto”
+3) Notify LO internally:
+   - Internal email/SMS: “Docs requested — watch for uploads”
+4) Start docs timer:
+   - Add to workflow “WF-POSTAPP-10 — Docs Requested Timer”
+
+DEFINITION OF DONE
+- Docs Requested is recorded + stage updated + timer running`,
                 subtitle: 'Docs Requested Auto',
                 goal: 'Ingest Blend documentation request event and start the timer.',
                 trigger: 'Incoming Webhook (Blend documentation event created)',
@@ -445,8 +866,64 @@ const workflows = {
                 ]
             },
             {
+                id: 'postapp-curated',
+                name: 'Docs Curated Detection',
+                subtitle: 'If available',
+                goal: 'If Blend indicates a LO curated/added custom documentation requests, mark that as LO engagement.',
+                trigger: 'Inbound Webhook OR Tag Added',
+                steps: [
+                    'Add tag "DOCS | Curated"',
+                    'Update Opportunity Stage to "Borrower Docs Requested – Curated"',
+                    'Add internal note'
+                ],
+                exitCriteria: [
+                    'File labeled as curated'
+                ],
+                testCases: [
+                    'Curated event triggers workflow'
+                ]
+            },
+            {
                 id: 'postapp-docs-timer',
                 name: 'Docs Requested Timer',
+                detailedGoal: `PURPOSE
+Automate borrower follow-ups after docs are requested:
+- 24h gentle reminder
+- 36h escalation + stage “Not received after 36 hours”
+- then a reminder every 2 days for a defined window
+Stop instantly when docs are received.
+
+TRIGGER
+- Added by WF-POSTAPP-05 when docs requested
+OR
+- Tag Added: “DOCS | Requested”
+
+WHAT THIS WORKFLOW MUST DO
+1) Guard: if tag “DOCS | Received” exists, exit immediately
+2) Wait 24 hours:
+   - If docs received → exit
+   - Else send borrower message: “Any questions on the requested documents?”
+   - Internal note to LO (optional)
+3) Wait until 36 hours total since request:
+   - If docs received → exit
+   - Else:
+     • Update Opportunity Stage = “Borrower Docs Requested – Not received after 36 hours”
+     • Send borrower message: “We’re putting your file on hold until docs are uploaded…”
+     • Send internal notification to LO
+4) Ongoing cadence:
+   - Every 48 hours:
+     • If docs received → exit
+     • Else send reminder (gentle)
+   - Stop after N days (e.g., 14 days) and route:
+     • Add tag “DOCS | Never Received”
+     • Add to workflow “WF-POSTAPP-90 — Nurture Routing”
+     • Exit
+
+IMPORTANT GHL NOTE
+Do NOT use “Wait for Reply to step.” Use time waits + checks for tag “DOCS | Received”.
+
+DEFINITION OF DONE
+- Either docs received stops the timer OR it routes to nurture after max duration`,
                 subtitle: '24h + 36h + 2-day cadence',
                 goal: 'Nudge borrower to upload docs. Stop if docs received.',
                 trigger: 'Started by "Blend Docs Requested Ingest" OR Stage change to Docs Requested',
@@ -470,6 +947,29 @@ const workflows = {
             {
                 id: 'postapp-docs-uploaded',
                 name: 'Blend Docs Uploaded Ingest',
+                detailedGoal: `PURPOSE
+When the borrower uploads documentation in Blend, stop follow-up timers, mark docs received, and move the file into the LO pre-approval request queue.
+
+TRIGGER
+- Inbound Webhook: documentation.uploaded / file.available / document.exported (Blend)
+OR
+- Tag Added: “DOCS | Received”
+
+WHAT THIS WORKFLOW MUST DO
+1) Tracking:
+   - Set CF “Docs Received At” = now
+   - Add tag “DOCS | Received”
+2) Stop reminders:
+   - Remove from workflow “WF-POSTAPP-10 — Docs Timer” (or set a stop tag that the timer checks)
+3) Move stage forward:
+   - Stage = “Borrower Docs Received”
+   - Then Stage = “Pending LO Pre‑Approval Request”
+4) Notify LO + task:
+   - Create task for assigned LO: “Complete LO Pre‑Approval Request Form”
+   - Internal email/SMS to LO with link to contact + checklist
+
+DEFINITION OF DONE
+- Docs received recorded, reminders stopped, and file is queued for LO pre-approval request`,
                 subtitle: 'Docs Received',
                 goal: 'Handle docs uploaded event, stop timer, and notify LO.',
                 trigger: 'Incoming Webhook (Documents uploaded by Prospect)',
@@ -500,6 +1000,33 @@ const workflows = {
             {
                 id: 'postapp-lo-req',
                 name: 'LO Pre-Approval Request Form -> Jason Queue',
+                detailedGoal: `PURPOSE
+Create a standardized, trackable process for Loan Officers to request Jason’s pre-approval review:
+When LO submits the Pre‑Approval Request (Checklist) form, move the opportunity into Jason’s work queue, create a task for Jason, and send him an internal email containing the LO’s completed checklist + key borrower identifiers.
+
+TRIGGER
+- Form Submitted: “LO Pre‑Approval Request (Checklist)”
+
+WHAT THIS WORKFLOW MUST DO
+1) Stamp request:
+   - Set CF “Pre‑Approval Request Submitted At” = now
+   - Add tag “PREAPPROVAL | Requested”
+2) Move to Jason queue:
+   - Pipeline = Post App – Working – Not Yet Converted
+   - Stage = “Pre‑Approval Review – Jason Work Assignment”
+3) Create Jason task:
+   - Title: “Pre‑Approval Review Needed: {{contact.name}}”
+   - Due: same day or +24h
+4) Email Jason:
+   - Include:
+     • Contact link
+     • Opportunity link/pipeline stage
+     • Assigned LO name
+     • All checklist fields (merge fields)
+5) Optional: notify LO confirmation
+
+DEFINITION OF DONE
+- Opportunity is in Jason’s stage + Jason has task + email with checklist details`,
                 subtitle: 'Operational Handoff',
                 goal: 'Route LO request to Jason for review.',
                 trigger: 'Form Submitted: FORM-LO-PREAPPROVAL-REQUEST',
@@ -520,6 +1047,40 @@ const workflows = {
             {
                 id: 'postapp-jason-dec',
                 name: 'Jason Write-Up Form -> Decision Routing',
+                detailedGoal: `PURPOSE
+When Jason completes the Pre‑Approval Review (Write‑Up) form, route the file:
+- Approved → move to Post App – Pre‑Approval Issued pipeline/stage
+- Needs More Info → move to “Pre‑Approval Wait – LO Work Assignment” and notify LO of missing items
+- Declined/Not credit worthy → route to nurture/decline path
+
+TRIGGER
+- Form Submitted: “Jason Pre‑Approval Review (Write‑Up)”
+
+WHAT THIS WORKFLOW MUST DO
+1) Stamp Jason review:
+   - Set CF “Jason Review Completed At” = now
+   - Add tag “PREAPPROVAL | Jason Reviewed”
+2) Read decision field from Jason’s form:
+   - Decision = Approved / Needs More Info / Declined
+3) Branch routing:
+   A) Approved:
+      - Update Opportunity → Pipeline “Post App – Pre‑Approval Issued”
+      - Stage = “Pre‑Approval Issued” (or your approved stage)
+      - Notify LO internally with Jason write-up summary
+   B) Needs More Info:
+      - Update Opportunity → Pipeline “Post App – Working – Not Yet Converted”
+      - Stage = “Pre‑Approval Wait – LO Work Assignment”
+      - Create LO task with missing items
+      - Email LO with Jason’s notes (merge fields)
+   C) Declined / Not credit worthy:
+      - Add tag “PREAPPROVAL | Declined”
+      - Add to workflow “WF-POSTAPP-90 — Nurture Routing”
+      - Notify LO internally
+4) Guardrails:
+   - If already moved to approved pipeline, do nothing
+
+DEFINITION OF DONE
+- File is routed to the correct next stage/pipeline and the responsible party has tasks/notifications`,
                 subtitle: 'Decision Execution',
                 goal: 'Route based on Jason\'s decision (Approved, Needs Info, Declined).',
                 trigger: 'Form Submitted: FORM-JASON-PREAPPROVAL-WRITEUP',
@@ -540,6 +1101,27 @@ const workflows = {
             {
                 id: 'postapp-refi',
                 name: 'Refinance Review Request',
+                detailedGoal: `PURPOSE
+When a file requires refinance review, place it into a dedicated refinance work queue for Jason with standardized internal notifications.
+
+TRIGGERS (pick one)
+- Opportunity enters stage “Refinance Review Requested”
+OR
+- Tag Added: “REFI | Review Requested”
+OR
+- Form Submitted: “Refi Review Request” (if you create a form)
+
+WHAT THIS WORKFLOW MUST DO
+1) Update stage:
+   - Pipeline = Post App – Working – Not Yet Converted (or a Refi pipeline)
+   - Stage = “Refinance Review – Jason Work Assignment”
+2) Create Jason task:
+   - Title: “Refi Review Needed: {{contact.name}}”
+3) Email Jason with:
+   - Contact/opportunity link + LO notes + refinance context
+
+DEFINITION OF DONE
+- Jason has a clear refi queue item + task + email context`,
                 subtitle: 'Refi Queue',
                 goal: 'Route refi requests to Jason.',
                 trigger: 'Tag "REFI | Review Requested" OR Form Submitted',
@@ -563,6 +1145,36 @@ const workflows = {
             {
                 id: 'lang-routing',
                 name: 'Spanish Routing',
+                detailedGoal: `PURPOSE
+Route Spanish-speaking borrowers into a Spanish-first experience:
+- detect Spanish via Blend preferred language OR AI detection of Spanish messages/transcripts
+- move the opportunity into “Spanish” visibility stages
+- enroll the contact into a Spanish conversation workflow or assign to a Spanish-capable LO when available.
+
+TRIGGERS
+- CF “Blend Preferred Language” = Spanish
+OR
+- AI detected Spanish in inbound SMS (keyword detection / language detection)
+OR
+- Call transcript language = Spanish
+
+WHAT THIS WORKFLOW MUST DO
+1) Tag + flag:
+   - Add tag “LANG | Spanish”
+   - Set CF “Preferred Language” = Spanish
+2) Update Opportunity for visibility:
+   - If pre-app unassigned: move to stage “Spanish Speaking – No Response” (or your equivalent)
+   - If engaged: move to stage “Spanish Speaking – AI Engaged/LO Call Transcript”
+3) Conversation handling:
+   - Add to workflow “Spanish Conversational AI — Finish Application”
+   - Goal of Spanish AI: only drive them to complete Blend app / docs (no small talk)
+4) Internal note:
+   - Create note for LO: “Spanish-speaking borrower; use translation tools / assign Spanish LO if available.”
+
+DEFINITION OF DONE
+- Borrower is clearly labeled Spanish
+- Opportunity reflects Spanish stage
+- Spanish conversation workflow is running`,
                 subtitle: 'Language detection and routing',
                 goal: 'Detect Spanish leads (preferred language OR Spanish response) and route to Spanish AI handling + tracking stages.',
                 trigger: 'Preferred Language field updated to Spanish OR Customer Replied (with AI classification) OR Transcript Generated',
@@ -582,6 +1194,35 @@ const workflows = {
             {
                 id: 'dnc-handler',
                 name: 'DNC / STOP Handler',
+                detailedGoal: `PURPOSE
+When a borrower requests STOP/DNC, immediately stop all SMS and call attempts, document the request, and send an opt-out confirmation email explaining how to re-engage.
+
+TRIGGERS
+- Customer Replied with keyword “STOP” (or any platform opt-out event)
+OR
+- DNC flag/label applied by system
+OR
+- Manual tag “DNC | Requested” added by staff
+
+WHAT THIS WORKFLOW MUST DO
+1) Compliance actions:
+   - Add to DND (SMS)
+   - Add to DND (Calls) for your GHL numbers (if available)
+2) Tagging & logging:
+   - Add tag “DNC | Confirmed”
+   - Create internal note: “Customer opted out on {{date}}”
+3) Opportunity stage:
+   - Update Opportunity → Stage = “DNC – Specific DNC Request” (in Pre‑App pipeline) OR equivalent DNC stage
+4) Email confirmation:
+   - Send email: “We’ve disabled phone/text. If you want to re-engage, reply with START or email us.”
+5) Remove from active outreach workflows:
+   - Remove from call blast / assignment workflows if enrolled
+
+DEFINITION OF DONE
+- DND applied
+- Opportunity marked DNC
+- Confirmation email sent
+- No future automated contact occurs unless customer re-opt-ins`,
                 subtitle: 'Opt-out handling',
                 goal: 'If contact opts out, stop calling/texting and send email re-engagement instructions.',
                 trigger: 'Keyword trigger (STOP, DNC) in inbound SMS OR "Contact DND enabled" trigger',
@@ -602,6 +1243,32 @@ const workflows = {
             {
                 id: 'data-sync',
                 name: 'Loan Amount → Opportunity Value Sync',
+                detailedGoal: `PURPOSE
+Ensure opportunity value reflects the borrower’s requested loan amount (or purchase price) so reporting is accurate.
+This fixes the Zillow/MRC mapping issue where loan amount is missing and opportunity value is blank.
+
+TRIGGERS
+- Contact Created from Zillow/MRC
+OR
+- Inbound Webhook received from Zillow/MRC lead
+OR
+- Opportunity Created in Lead Intake pipeline
+
+WHAT THIS WORKFLOW MUST DO
+1) Read incoming value:
+   - From CF “Loan Amount” (preferred) OR CF “Purchase Price”
+2) If value exists:
+   - Update Opportunity Value = loan amount (or calculated loan amount if you have %)
+   - Add tag “VALUE | Set”
+3) If missing:
+   - Add tag “VALUE | Missing”
+   - Create internal task: “Backfill loan amount mapping for this lead”
+4) (Optional) Backfill helper:
+   - If you later import a CSV/backfill, rerun this workflow via tag “VALUE | Backfill”
+
+DEFINITION OF DONE
+- Opportunity value is populated whenever loan amount data is available
+- Missing values are clearly tagged for cleanup`,
                 subtitle: 'Data synchronization',
                 goal: 'Ensure Opportunity Value is set from Loan Amount for accurate reporting.',
                 trigger: 'Opportunity Created OR Contact Field Updated: CF – Loan Amount',
@@ -620,6 +1287,14 @@ const workflows = {
             {
                 id: 'data-missing',
                 name: 'Missing Loan Amount Tagging',
+                detailedGoal: `PURPOSE
+See WF-DATA-01 (Loan Amount Sync).
+This workflow component specifically handles the "Missing" logic if implemented separately.
+
+WHAT THIS WORKFLOW MUST DO
+If value is missing:
+- Add tag “VALUE | Missing”
+- Create internal task: “Backfill loan amount mapping for this lead”`,
                 subtitle: 'Optional data tracking',
                 goal: 'Tag contacts/opportunities missing loan amount data for backfill.',
                 trigger: 'Opportunity Created OR Contact Field Updated',
@@ -638,6 +1313,27 @@ const workflows = {
             {
                 id: 'lead-not-interested',
                 name: 'Not Interested Handling',
+                detailedGoal: `PURPOSE
+When a prospect replies indicating they are not interested / wrong inquiry, stop active outreach politely, mark the opportunity as “Not Interested,” and preserve the ability to re-engage later if they initiate contact.
+
+TRIGGER
+- Inbound SMS analyzed as “Not interested” intent (keywords like “not interested”, “stop contacting”, “wrong person”)
+(Use your AI intent router OR a keyword condition)
+
+WHAT THIS WORKFLOW MUST DO
+1) Update opportunity:
+   - Pipeline = Pre‑Application – Unassigned New (or Lead Intake pipeline)
+   - Stage = “Not Interested”
+2) Send one final polite message (optional if not DNC):
+   - “Thanks — if anything changes, reply here.”
+3) Tagging:
+   - Add tag “LEAD | Not Interested”
+4) Remove from active outreach workflows:
+   - Remove from lead intake follow-ups / call blasts if enrolled
+
+DEFINITION OF DONE
+- Opportunity clearly labeled Not Interested
+- Outreach stopped (unless they re-initiate)`,
                 subtitle: 'Recommended lead qualification',
                 goal: 'If lead explicitly says they are not interested, respond politely and route them for later re-engagement (no aggressive chasing).',
                 trigger: 'Customer Replied (in lead intake / AI messages) with AI intent classification = "not interested" (or keyword rules)',
@@ -658,6 +1354,37 @@ const workflows = {
             {
                 id: 'postapp-nurture',
                 name: 'Nurture Routing (Placeholder)',
+                detailedGoal: `PURPOSE
+Ensure post-app files do not disappear into “nowhere land.”
+Route files into the correct nurture buckets based on why they stalled:
+- Not credit worthy (dead on arrival)
+- Viable loan but docs never received
+- Long-term hold / customer ghosted
+This workflow should apply tags/stages and enroll the contact in the right nurture micro-workflow.
+
+TRIGGERS
+- Tag Added: “DOCS | Never Received”
+OR
+- Tag Added: “CREDIT | Not Worthy”
+OR
+- Manual disposition field updated by LO (e.g., “Customer ghosted”)
+
+WHAT THIS WORKFLOW MUST DO
+1) Determine reason:
+   - If CREDIT not worthy → add tag “NURTURE | Credit Improvement” and move to that nurture stage
+   - If DOCS never received → add tag “NURTURE | Docs Never Received” and move to that stage
+   - If LO disposition = ghosted → add tag “NURTURE | Ghosted” and move accordingly
+2) Move opportunity into the nurture pipeline/stage Jason defined:
+   - Example stage: “Application Taken – Viable Loan – Documentation Never Received”
+3) Enroll in the correct nurture micro-workflow:
+   - Credit improvement sequence
+   - Docs reminder long-term sequence
+   - Re-engagement sequence
+4) Internal logging:
+   - Create note for reporting and future reactivation
+
+DEFINITION OF DONE
+- File is categorized, moved to the correct nurture stage, and an appropriate nurture sequence is running`,
                 subtitle: 'Not Credit Worthy / Docs Never Received',
                 goal: 'Move rejected/stalled leads to nurture.',
                 trigger: 'Various rejection points',
@@ -904,9 +1631,9 @@ function initializeChecklists() {
             item.appendChild(content);
             fieldsWrapper.appendChild(item);
 
-            // Load saved state
+            // Load saved state (Default to checked)
             const saved = localStorage.getItem(item.getAttribute('data-id'));
-            if (saved === 'true') {
+            if (saved === 'true' || saved === null) {
                 checkbox.checked = true;
                 item.classList.add('completed');
             }
@@ -941,9 +1668,9 @@ function initializeChecklists() {
         item.appendChild(content);
         tagsChecklist.appendChild(item);
 
-        // Load saved state
+        // Load saved state (Default to checked)
         const saved = localStorage.getItem(item.getAttribute('data-id'));
-        if (saved === 'true') {
+        if (saved === 'true' || saved === null) {
             checkbox.checked = true;
             item.classList.add('completed');
         }
@@ -978,9 +1705,9 @@ function initializeChecklists() {
         item.appendChild(content);
         claimChecklist.appendChild(item);
 
-        // Load saved state
+        // Load saved state (Default to checked)
         const saved = localStorage.getItem(item.getAttribute('data-id'));
-        if (saved === 'true') {
+        if (saved === 'true' || saved === null) {
             checkbox.checked = true;
             item.classList.add('completed');
         }
@@ -1149,6 +1876,56 @@ function initializeWorkflows() {
             const cardContent = document.createElement('div');
             cardContent.className = 'workflow-card-content';
 
+            if (workflow.detailedGoal) {
+                const detailed = document.createElement('div');
+                detailed.className = 'workflow-section';
+                const detailedTitle = document.createElement('div');
+                detailedTitle.className = 'workflow-section-title';
+                detailedTitle.textContent = '🤖 AI Prompt / Detailed Spec';
+                detailedTitle.onclick = function () { toggleSubSection(this); };
+
+                const detailedWrapper = document.createElement('div');
+                detailedWrapper.className = 'workflow-section-content-wrapper';
+
+                const detailedContent = document.createElement('div');
+                detailedContent.className = 'workflow-section-content';
+
+                // Copy button
+                const copyBtn = document.createElement('button');
+                copyBtn.textContent = 'Copy Prompt';
+                copyBtn.style.marginBottom = '0.5rem';
+                copyBtn.style.fontSize = '0.8rem';
+                copyBtn.style.padding = '0.3rem 0.6rem';
+                copyBtn.onclick = function (e) {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(workflow.detailedGoal.trim()).then(() => {
+                        const original = copyBtn.textContent;
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(() => copyBtn.textContent = original, 2000);
+                    });
+                };
+
+                const pre = document.createElement('pre');
+                pre.style.whiteSpace = 'pre-wrap';
+                pre.style.background = '#f1f5f9';
+                pre.style.color = '#334155';
+                pre.style.padding = '1rem';
+                pre.style.borderRadius = '4px';
+                pre.style.fontSize = '0.85rem';
+                pre.style.border = '1px solid var(--border-light)';
+                pre.style.fontFamily = 'monospace';
+                pre.style.maxHeight = '400px';
+                pre.style.overflowY = 'auto';
+                pre.textContent = workflow.detailedGoal.trim();
+
+                detailedContent.appendChild(copyBtn);
+                detailedContent.appendChild(pre);
+                detailedWrapper.appendChild(detailedContent);
+                detailed.appendChild(detailedTitle);
+                detailed.appendChild(detailedWrapper);
+                cardContent.appendChild(detailed);
+            }
+
             card.appendChild(header);
             cardContent.appendChild(goal);
             cardContent.appendChild(trigger);
@@ -1180,9 +1957,11 @@ function initializeWorkflows() {
 
             card.appendChild(cardContent);
 
-            // Load saved state
+            // Load saved state - Default specific completed workflows
+            const uncompletedIds = ['postapp-refi', 'lang-routing', 'dnc-handler', 'data-sync', 'data-missing', 'lead-not-interested', 'postapp-nurture'];
             const saved = localStorage.getItem(`workflow-${workflow.id}`);
-            if (saved === 'true') {
+
+            if (saved === 'true' || (saved === null && !uncompletedIds.includes(workflow.id))) {
                 checkbox.checked = true;
                 card.classList.add('completed');
             }
