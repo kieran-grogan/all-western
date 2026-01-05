@@ -4,34 +4,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHL Blend Workflow Build Guide | All Western Mortgage</title>
+    <title>AIM Master Build Guide | All Western Mortgage</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
         :root {
-            --primary: #2c3e50;
-            --primary-light: #34495e;
-            --accent: #3498db;
-            --accent-hover: #2980b9;
-            --success: #27ae60;
-            --success-light: #2ecc71;
-            --success-bg: rgba(39, 174, 96, 0.15);
-            --warning: #f39c12;
-            --warning-light: #e67e22;
-            --warning-bg: rgba(243, 156, 18, 0.15);
-            --danger: #e74c3c;
-            --bg: #ecf0f1;
-            --bg-light: #d5dbdb;
+            --primary: #1e293b;
+            --primary-light: #334155;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --success-light: #34d399;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning: #f59e0b;
+            --warning-light: #fbbf24;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --bg-light: #f1f5f9;
             --card-bg: #ffffff;
-            --card-bg-alt: #f8f9fa;
-            --text: #2c3e50;
-            --text-secondary: #34495e;
-            --text-muted: #7f8c8d;
-            --border: #bdc3c7;
-            --border-light: #ecf0f1;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-            --shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
-            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+            --card-bg-alt: #f1f5f9;
+            --text: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1);
         }
 
         * {
@@ -41,120 +40,141 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg);
             color: var(--text);
-            line-height: 1.7;
+            line-height: 1.6;
             font-size: 15px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
             min-height: 100vh;
         }
 
         .container {
-            max-width: 1280px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 2.5rem 2rem;
+            padding: 2rem;
         }
 
         /* Header */
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
-            padding: 3rem 2.5rem;
-            border-radius: 12px;
+            padding: 3rem;
+            border-radius: 16px;
             margin-bottom: 2rem;
             box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
         }
 
         .header h1 {
-            font-size: 2.25rem;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.02em;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.025em;
         }
 
         .header .meta {
-            opacity: 0.85;
-            font-size: 0.9375rem;
-            line-height: 1.7;
-            font-weight: 400;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .meta-item strong {
+            display: block;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
         }
 
         /* Progress Bar */
         .progress-section {
             background: var(--card-bg);
             padding: 2rem;
-            border-radius: 10px;
+            border-radius: 16px;
             margin-bottom: 2rem;
             box-shadow: var(--shadow);
-            border: 1px solid var(--border-light);
+            border: 1px solid var(--border);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .progress-info h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--bg-light);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Tabs */
         .tabs-container {
             background: var(--card-bg);
-            border-radius: 10px;
+            border-radius: 16px;
             box-shadow: var(--shadow);
-            border: 1px solid var(--border-light);
+            border: 1px solid var(--border);
             overflow: hidden;
-            margin-bottom: 0;
         }
 
         .tabs-nav {
             display: flex;
-            background: var(--card-bg);
-            border-bottom: 2px solid var(--border);
+            background: var(--bg-light);
+            padding: 0.5rem;
+            gap: 0.3rem;
+            border-bottom: 1px solid var(--border);
             overflow-x: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) transparent;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .tabs-nav::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .tabs-nav::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .tabs-nav::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
         }
 
         .tab-button {
-            padding: 1rem 1.75rem;
+            padding: 0.75rem 1rem;
             background: transparent;
             border: none;
             color: var(--text-secondary);
             cursor: pointer;
-            font-size: 0.9375rem;
-            font-weight: 500;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
             white-space: nowrap;
-            transition: all 0.2s ease;
-            border-bottom: 3px solid transparent;
-            position: relative;
-            font-family: inherit;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .tab-button:hover {
-            color: var(--text);
-            background: var(--bg-light);
+            background: rgba(255, 255, 255, 0.5);
+            color: var(--primary);
         }
 
         .tab-button.active {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
             background: var(--card-bg);
-            font-weight: 600;
+            color: var(--accent);
+            box-shadow: var(--shadow-sm);
         }
 
         .tab-content {
             display: none;
-            padding: 2rem;
-            animation: fadeIn 0.3s ease;
+            padding: 2.5rem;
+            animation: fadeIn 0.4s ease-out;
         }
 
         .tab-content.active {
@@ -173,104 +193,101 @@
             }
         }
 
-        .progress-bar {
-            width: 100%;
-            height: 12px;
-            background: var(--border-light);
-            border-radius: 999px;
-            overflow: hidden;
-            margin-top: 1.25rem;
+        /* Content Sections */
+        .content-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--success));
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 999px;
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
-
-        /* Section styling removed - using tabs now */
 
         /* Checklist Items */
-        .checklist {
-            list-style: none;
-        }
-
         .checklist-item {
-            padding: 1rem 1.25rem;
-            margin-bottom: 0.5rem;
-            background: var(--card-bg);
-            border-radius: 6px;
-            border-left: 3px solid var(--border);
-            border: 1px solid var(--border-light);
             display: flex;
             align-items: flex-start;
             gap: 1rem;
-            transition: all 0.2s ease;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+            border: 1px solid transparent;
         }
 
         .checklist-item:hover {
-            border-left-color: var(--accent);
-            border-color: var(--border);
-            box-shadow: var(--shadow);
-            background: var(--card-bg-alt);
+            background: white;
+            border-color: var(--accent);
+            transform: translateX(4px);
+            box-shadow: var(--shadow-sm);
         }
 
         .checklist-item.completed {
             background: var(--success-bg);
-            border-left-color: var(--success);
             border-color: var(--success);
         }
 
         .checklist-item input[type="checkbox"] {
             width: 20px;
             height: 20px;
+            margin-top: 2px;
             cursor: pointer;
-            margin-top: 3px;
-            flex-shrink: 0;
-            accent-color: var(--accent);
+            accent-color: var(--success);
         }
 
-        .checklist-item-content {
+        .checklist-content {
             flex: 1;
         }
 
-        .checklist-item-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text);
-            font-size: 0.9375rem;
-            line-height: 1.6;
+        .checklist-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
         }
 
-        .checklist-item.completed .checklist-item-title {
-            text-decoration: line-through;
+        .checklist-desc {
+            font-size: 0.9rem;
             color: var(--text-secondary);
-            opacity: 0.7;
         }
 
-        .checklist-item-description {
-            font-size: 0.9375rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-            line-height: 1.6;
+        /* Workflow Cards */
+        .workflow-group {
+            margin-bottom: 2.5rem;
         }
 
-        /* Workflow Card */
+        .workflow-group-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
         .workflow-card {
             background: var(--card-bg);
-            border-radius: 10px;
-            padding: 0;
-            margin-bottom: 1.25rem;
-            border: 2px solid var(--border);
-            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1rem;
             overflow: hidden;
-            box-shadow: var(--shadow-sm);
+            transition: all 0.3s;
         }
 
         .workflow-card:hover {
             border-color: var(--accent);
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow);
         }
 
         .workflow-card.completed {
@@ -279,406 +296,174 @@
         }
 
         .workflow-header {
+            padding: 1rem 1.5rem;
             display: flex;
-            align-items: start;
-            padding: 1.25rem 1.5rem;
+            align-items: center;
+            gap: 1.25rem;
             cursor: pointer;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid var(--border-light);
-            gap: 1rem;
-            background: var(--card-bg);
+            background: var(--bg-light);
+            transition: background 0.2s;
         }
 
         .workflow-header:hover {
-            background: var(--card-bg-alt);
+            background: #eef2f7;
         }
 
-        .workflow-header-left {
-            display: flex;
-            align-items: start;
-            gap: 1rem;
+        .workflow-header h3 {
             flex: 1;
-        }
-
-        .workflow-header-content {
-            flex: 1;
-        }
-
-        .workflow-card.collapsed .workflow-header {
-            border-bottom: none;
-        }
-
-        .workflow-card-content {
-            padding: 1.5rem;
-            overflow: hidden;
-            transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-            max-height: 10000px;
-            opacity: 1;
-            background: var(--card-bg-alt);
-        }
-
-        .workflow-card.collapsed .workflow-card-content {
-            max-height: 0;
-            opacity: 0;
-            padding: 0 1.5rem;
-            margin: 0;
-        }
-
-        .workflow-header-checkbox {
-            width: 20px;
-            height: 20px;
-            margin-top: 3px;
-            flex-shrink: 0;
-            cursor: pointer;
-            accent-color: var(--accent);
-        }
-
-        .workflow-header::after {
-            content: '▼';
-            font-size: 0.875rem;
-            color: var(--accent);
-            transition: transform 0.3s ease;
-            flex-shrink: 0;
-            margin-top: 4px;
-            font-weight: bold;
-        }
-
-        .workflow-card.collapsed .workflow-header::after {
-            transform: rotate(-90deg);
-        }
-
-        .workflow-id {
-            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            font-size: 1rem;
             font-weight: 700;
-            color: var(--accent);
-            font-size: 0.875rem;
-            letter-spacing: 0.05em;
         }
 
-        .workflow-title {
-            font-size: 1.0625rem;
-            font-weight: 600;
-            margin-top: 0.25rem;
-            color: var(--text);
-            letter-spacing: -0.01em;
+        .workflow-id-pill {
+            background: var(--primary);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .workflow-content {
+            padding: 1.5rem;
+            display: none;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
+
+        .workflow-card.active .workflow-content {
+            display: block;
+        }
+
+        .workflow-card.active .workflow-header {
+            background: white;
+        }
+
+        .workflow-spec-box {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Fira Code', 'Monaco', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            position: relative;
+            margin-top: 1rem;
+            border: 1px solid #334155;
             line-height: 1.5;
         }
 
-        .workflow-section {
-            margin-top: 1.75rem;
-        }
-
-        .workflow-section.collapsed .workflow-section-content-wrapper {
-            max-height: 0;
-            opacity: 0;
-            margin-top: 0;
-            overflow: hidden;
-        }
-
-        .workflow-section-title {
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 1rem;
-            font-size: 0.9375rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
             cursor: pointer;
-            padding: 0.875rem 1.25rem;
-            background: var(--card-bg);
-            border-radius: 8px;
-            border: 2px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .workflow-section-title:hover {
-            background: var(--bg-light);
-            border-color: var(--accent);
-            box-shadow: var(--shadow);
-        }
-
-        .workflow-section-title::after {
-            content: '▼';
-            font-size: 0.875rem;
-            color: var(--accent);
-            transition: transform 0.3s ease;
-            font-weight: bold;
-        }
-
-        .workflow-section.collapsed .workflow-section-title::after {
-            transform: rotate(-90deg);
-        }
-
-        /* Nested sections - indented and visually distinct */
-        .workflow-section .workflow-section {
-            margin-left: 2rem;
-            margin-top: 1rem;
-        }
-
-        .workflow-section .workflow-section-title {
-            font-size: 0.8125rem;
             font-weight: 600;
-            padding: 0.625rem 1rem;
-            background: var(--card-bg-alt);
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Diagrams */
+        .diagram-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
             border: 1px solid var(--border);
-            border-left: 4px solid var(--success);
-            text-transform: none;
-            letter-spacing: 0;
-        }
-
-        .workflow-section .workflow-section-title:hover {
-            background: var(--bg-light);
-            border-color: var(--success);
-        }
-
-        .workflow-section-title.no-collapse {
-            cursor: default;
-            padding: 0.75rem 0;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            text-transform: uppercase;
-            font-size: 0.875rem;
-            letter-spacing: 0.05em;
-        }
-
-        .workflow-section-title.no-collapse:hover {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-        }
-
-        .workflow-section-title.no-collapse::after {
-            display: none;
-        }
-
-        .workflow-section-content-wrapper {
-            overflow: hidden;
-            transition: max-height 0.3s ease, opacity 0.2s ease;
-            max-height: 5000px;
-            opacity: 1;
-        }
-
-        .workflow-section.collapsed .workflow-section-content-wrapper {
-            max-height: 0;
-            opacity: 0;
-            margin-top: 0;
-        }
-
-        .workflow-section-content {
-            background: var(--card-bg-alt);
-            padding: 1.5rem;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent);
-            border: 1px solid var(--border-light);
-            margin-top: 1rem;
-            font-weight: normal;
-            font-size: 0.9375rem;
-            line-height: 1.8;
-            color: var(--text-secondary);
-        }
-
-        .workflow-steps {
-            list-style: decimal;
-            padding-left: 1.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .workflow-steps li {
-            margin-bottom: 0.75rem;
-            padding-left: 0.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
         }
 
         /* Badges */
         .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.1rem 0.5rem;
+            border-radius: 999px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
+        }
+
+        .badge-count {
+            background: var(--border);
+            color: var(--text-secondary);
             margin-left: 0.5rem;
         }
 
-        .tab-button .badge {
-            background: var(--bg-light);
-            color: var(--text-secondary);
-            padding: 0.25rem 0.625rem;
-            font-size: 0.75rem;
-            margin-left: 0.5rem;
-            border-radius: 12px;
-        }
-
-        .tab-button.active .badge {
-            background: var(--accent);
-            color: white;
-        }
-
-        .badge-optional {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-required {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        /* Field/Tag Lists */
-        .field-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .field-item {
-            background: white;
-            padding: 1rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-        }
-
-        .field-name {
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .field-type {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        /* Button */
-        button {
-            padding: 0.625rem 1.25rem;
-            background: var(--danger);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.9375rem;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm);
-            font-family: inherit;
-        }
-
-        button:hover {
-            background: #dc2626;
-            box-shadow: var(--shadow-md);
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        /* Mermaid Diagram Container */
-        .diagram-container {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-            overflow-x: auto;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .diagram-container .mermaid {
-            display: flex;
-            justify-content: center;
-            min-height: 200px;
-        }
-
-        /* Test Cases */
-        .test-case {
-            background: var(--card-bg);
-            padding: 1.25rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            border-left: 4px solid var(--warning);
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .test-case-title {
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            color: var(--text);
-            font-size: 1.0625rem;
-        }
-
-        .test-case-steps {
-            list-style: none;
-            padding-left: 0;
-            margin-top: 1rem;
-        }
-
-        .test-case-steps li {
-            margin-bottom: 0.625rem;
-            padding-left: 1.75rem;
-            position: relative;
-            color: var(--text-secondary);
-        }
-
-        .test-case-steps li:before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: var(--success);
-            font-weight: bold;
-            font-size: 1.125rem;
-        }
-
-        /* Gotchas */
-        .gotcha-item {
-            background: var(--warning-bg);
-            border-left: 4px solid var(--warning);
-            border: 1px solid var(--warning);
-            border-left-width: 4px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            border-radius: 8px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .field-list {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Utility Classes */
-        .mt-1 {
-            margin-top: 1rem;
-        }
-
-        .mt-2 {
-            margin-top: 2rem;
-        }
-
-        .mb-1 {
-            margin-bottom: 1rem;
-        }
-
-        .mb-2 {
+        /* Tables for Pipelines */
+        .pipeline-table {
+            width: 100%;
+            border-collapse: collapse;
             margin-bottom: 2rem;
         }
 
-        .text-center {
-            text-align: center;
+        .pipeline-table th,
+        .pipeline-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pipeline-table th {
+            background: var(--bg-light);
+            font-weight: 700;
+        }
+
+        .stage-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .stage-item {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .stage-index {
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        /* Buttons */
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .tabs-nav {
+                justify-content: flex-start;
+            }
         }
     </style>
 </head>
@@ -686,313 +471,893 @@
 <body>
     <div class="container">
         <!-- Header -->
-        <div class="header">
-            <h1>🚀 GHL Blend Workflow Build Guide</h1>
+        <header class="header">
+            <h1>🚀 AIM Master Build Guide</h1>
             <div class="meta">
-                <strong>Client:</strong> Jason Young / All Western Mortgage<br>
-                <strong>Purpose:</strong> Blend Pre-App → Claim → LO Gate → Post-App Automation System<br>
-                <strong>Document Date:</strong> 2025-12-16
-            </div>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="progress-section">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong>Overall Progress</strong>
-                    <div id="progress-text"
-                        style="font-size: 0.9375rem; color: var(--text-secondary); font-weight: 500;">0% Complete</div>
+                <div class="meta-item">
+                    <strong>Client</strong>
+                    Jason Young / All Western Mortgage
                 </div>
-                <button onclick="resetProgress()">Reset Progress</button>
+                <div class="meta-item">
+                    <strong>System Name</strong>
+                    AIM Automation System
+                </div>
+                <div class="meta-item">
+                    <strong>Source of Truth</strong>
+                    Master Build Spec v1 (Dec 2025)
+                </div>
+                <div class="meta-item">
+                    <strong>Status</strong>
+                    <span id="overall-status-badge" class="badge"
+                        style="background: var(--warning); color: white;">Building</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Progress -->
+        <section class="progress-section">
+            <div class="progress-header">
+                <div class="progress-info">
+                    <h2>Overall Construction Progress</h2>
+                    <p id="progress-text" style="color: var(--text-secondary); font-size: 0.9rem;">0% Complete</p>
+                </div>
+                <button class="btn-ghost" onclick="resetProgress()">Reset All Progress</button>
             </div>
             <div class="progress-bar">
                 <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
             </div>
-        </div>
+        </section>
 
-        <!-- Tabs Container -->
+        <!-- Main Body -->
         <div class="tabs-container">
-            <div class="tabs-nav">
+            <nav class="tabs-nav">
                 <button class="tab-button active" onclick="switchTab('overview', this)">📋 Overview</button>
-                <button class="tab-button" onclick="switchTab('setup', this)">⚙️ Setup <span class="badge"
-                        id="setup-badge" style="margin-left: 0.5rem;">0/4</span></button>
-                <button class="tab-button" onclick="switchTab('claim', this)">📄 Claim Page <span class="badge"
-                        id="claim-badge" style="margin-left: 0.5rem;">0/3</span></button>
-                <button class="tab-button" onclick="switchTab('workflows', this)">🔄 Workflows <span class="badge"
-                        id="workflow-badge" style="margin-left: 0.5rem;">0/12</span></button>
-                <button class="tab-button" onclick="switchTab('implementation', this)">📅 Implementation</button>
-                <button class="tab-button" onclick="switchTab('tests', this)">🧪 Tests <span class="badge"
-                        id="test-badge" style="margin-left: 0.5rem;">0/7</span></button>
-                <button class="tab-button" onclick="switchTab('open-items', this)">❓ Open Items</button>
-                <button class="tab-button" onclick="switchTab('gotchas', this)">⚠️ Gotchas <span class="badge"
-                        id="gotcha-badge" style="margin-left: 0.5rem;">0/7</span></button>
-            </div>
+                <button class="tab-button" onclick="switchTab('pipelines', this)">🛤️ Pipelines <span
+                        class="badge badge-count">8</span></button>
+                <button class="tab-button" onclick="switchTab('setup', this)">⚙️ Global Setup</button>
+                <button class="tab-button" onclick="switchTab('workflows', this)">🔄 Workflows <span id="wf-badge"
+                        class="badge badge-count">32</span></button>
+                <button class="tab-button" onclick="switchTab('qa', this)">🧪 QA Check</button>
+            </nav>
 
             <!-- Tab: Overview -->
             <div id="tab-overview" class="tab-content active">
-                <div class="workflow-section collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">Business Outcomes</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="workflow-section-content">
-                            <ul style="list-style: none; padding-left: 0;">
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Single Claim URL</strong> - All LOs use
-                                    one link to claim leads</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Lead Context</strong> - LOs see
-                                    name/city/loan amount before claiming</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>First Claim Wins</strong> - Deterministic
-                                    claim assignment</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Blend Monitoring</strong> - Checks every 5
-                                    minutes for SSN/DOB or inactivity</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>LO Accountability</strong> - 30-minute SLA
-                                    gate with auto-reassignment</li>
-                                <li style="margin-bottom: 0.75rem;">✅ <strong>Special Routing</strong> - Spanish, DNC,
-                                    and loan amount handling</li>
+                <div class="content-card">
+                    <h2 class="section-title">Goal & Purpose</h2>
+                    <p>One clean, organized “single source of truth” for the entire build (pipelines + fields + tags +
+                        forms + workflows + build order + progress tracker).</p>
+                    <div style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h3 style="font-size: 1rem; margin-bottom: 1rem;">Glossary</h3>
+                            <ul style="padding-left: 1.2rem; font-size: 0.95rem; color: var(--text-secondary);">
+                                <li><strong>CF</strong> = Custom Field (Settings → Custom Fields)</li>
+                                <li><strong>Opportunity</strong> = The card inside Pipelines</li>
+                                <li><strong>Trigger Link</strong> = A trackable "button" link for manual actions</li>
+                                <li><strong>LO</strong> = Loan Officer</li>
+                                <li><strong>Blend</strong> = Primary Event Engine (Ingest/Monitoring)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 1rem; margin-bottom: 1rem;">Build Rules</h3>
+                            <ul style="padding-left: 1.2rem; font-size: 0.95rem; color: var(--text-secondary);">
+                                <li><strong>Micro-scoped</strong>: No monolithic workflows.</li>
+                                <li><strong>Wait Heuristics</strong>: Use tags/CFs instead of "Wait for Reply".</li>
+                                <li><strong>Jason Gatekeeper</strong>: All submissions pass through Jason.</li>
+                                <li><strong>Blend Primary</strong>: React to inbound webhooks + milestones.</li>
                             </ul>
                         </div>
                     </div>
+                    <div
+                        style="margin-top: 2rem; padding: 1rem; background: var(--primary-light); color: white; border-radius: 8px; font-size: 0.9rem;">
+                        💡 <strong>GHL Mapping Ready:</strong> I have completed an environment audit. View the <a
+                            href="ghl_workflow_mapping.md"
+                            style="color: white; text-decoration: underline; font-weight: 700;">GHL Workflow Audit &
+                            Mapping Guide</a> for instructions on renaming and organizing your existing flows.
+                    </div>
                 </div>
 
-                <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">High-Level Architecture</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="diagram-container" style="margin-top: 1rem;">
-                            <div class="mermaid">flowchart TD
-                                A[Blend User Created App Started Event] --> B[WF-BLEND-01 Ingest Initial SMS]
-                                B --> C[WF-BLEND-02 Monitoring Loop 5 min]
-                                C -->|SSN DOB entered| D[WF-CLAIM-01 Application Blast]
-                                C -->|Inactive 45m| E[WF-BLEND-03 Inactivity Call Blast]
-                                D --> F[Claim Page FORM-LO-CLAIM]
-                                F --> G[WF-CLAIM-02 Claim Processor]
-                                G -->|Award| H[Move to Assigned Pipeline Start Gate]
-                                H --> I[WF-GATE-01 30m LO First-Touch Gate]
-                                I -->|No touch| D
-                                I -->|Touched| J[Normal LO Work Post-App when ready]</div>
+                <div class="content-card">
+                    <h2 class="section-title">System Architecture</h2>
+                    <div class="diagram-container">
+                        <div class="mermaid">
+                            flowchart TD
+                            A[Blend User Event] --> B{Router}
+                            B -->|Pre-App| C[Monitoring Loop]
+                            B -->|App Taken| D[Post-App Ingest]
+                            C -->|SSN/DOB| E[LO Claim Blast]
+                            D --> F[Credit Review]
+                            F --> G[LO Checklist Form]
+                            G --> H[Jason Review Queue]
+                            H -->|Approved| I[Pre-Approval Issued]
+                            I --> J[RESPA Trigger Router]
+                            J --> K[Ops Submission Form]
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab: Pipelines -->
+            <div id="tab-pipelines" class="tab-content">
+                <div id="pipelines-container">
+                    <!-- Populated by JS -->
                 </div>
             </div>
 
             <!-- Tab: Setup -->
             <div id="tab-setup" class="tab-content">
-                <!-- Custom Fields -->
-                <div class="workflow-section collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.1 Create Contact Custom
-                        Fields</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="checklist" id="fields-checklist" style="margin-top: 1rem;">
-                            <!-- Fields will be populated by JS -->
-                        </div>
+                <div class="workflow-group">
+                    <div class="workflow-group-title">1. Required Tags</div>
+                    <div id="tags-container"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
 
-                <!-- Tags -->
-                <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.2 Create Tags</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="checklist" id="tags-checklist" style="margin-top: 1rem;">
-                            <!-- Tags will be populated by JS -->
-                        </div>
+                <div class="workflow-group" style="margin-top: 3rem;">
+                    <div class="workflow-group-title">2. Custom Fields (Categorized)</div>
+                    <div id="fields-container">
+                        <!-- Populated by JS -->
                     </div>
-                </div>
-
-                <!-- Team Setup -->
-                <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.3 Configure LO Team</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="checklist-item completed" data-id="team-setup" style="margin-top: 1rem;">
-                            <input type="checkbox" id="team-setup-cb" onchange="updateProgress()" checked>
-                            <div class="checklist-item-content">
-                                <div class="checklist-item-title">Create "Loan Officers" Team</div>
-                                <div class="checklist-item-description">
-                                    <strong>Path:</strong> Settings → My Staff → Teams → + Create Team<br>
-                                    Add all LO users and confirm each has mobile number and correct permissions
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Opportunity Ownership -->
-                <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">2.4 Confirm Opportunity
-                        Ownership</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="checklist-item completed" data-id="opp-ownership" style="margin-top: 1rem;">
-                            <input type="checkbox" id="opp-ownership-cb" onchange="updateProgress()" checked>
-                            <div class="checklist-item-content">
-                                <div class="checklist-item-title">Standardize Ownership Rules</div>
-                                <div class="checklist-item-description">
-                                    Contact owner = LO user who claimed<br>
-                                    Opportunity owner = same LO user<br>
-                                    Pipeline changes must be explicit in workflows
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Claim Page -->
-            <div id="tab-claim" class="tab-content">
-                <div class="checklist" id="claim-checklist">
-                    <!-- Will be populated by JS -->
                 </div>
             </div>
 
             <!-- Tab: Workflows -->
             <div id="tab-workflows" class="tab-content">
                 <div id="workflows-container">
-                    <!-- Workflows will be populated by JS -->
+                    <!-- Populated by JS -->
                 </div>
+            </div>
 
-                <!-- Visual Workflow Maps -->
-                <div class="workflow-section mt-2 collapsed">
-                    <div class="workflow-section-title" onclick="toggleSubSection(this)">Visual Workflow Maps
-                        (Subsystems)</div>
-                    <div class="workflow-section-content-wrapper">
-                        <div class="diagram-container" style="margin-top: 1rem;">
-                            <div class="workflow-section-title" style="margin-bottom: 1rem;">Claim Subsystem</div>
-                            <div class="mermaid">flowchart TD
-                                A[Application Blast] --> B[Claim Page Form]
-                                B --> C[Claim Processor]
-                                C -->|Already claimed| D[Notify LO Denied]
-                                C -->|Award| E[Assign Contact Opp]
-                                E --> F[30m SLA Gate]
-                                F -->|Touched| G[End]
-                                F -->|No touch| H[Exclude LO Reblast]
-                                H --> A</div>
-                        </div>
-
-                        <div class="diagram-container">
-                            <div class="workflow-section-title" style="margin-bottom: 1rem;">Blend Monitoring Subsystem
-                            </div>
-                            <div class="mermaid">flowchart TD
-                                A[Blend Event Ingest] --> B[Blend Monitoring Loop]
-                                B -->|SSN DOB| C[Application Blast]
-                                B -->|Inactive 45m| D[Blend Inactivity Branch]
-                                D --> E[Fallback SMS Revival Pool]</div>
-                        </div>
-
-                        <div class="diagram-container">
-                            <div class="workflow-section-title" style="margin-bottom: 1rem;">Post-App Subsystem</div>
-                            <div class="mermaid">flowchart TD
-                                A[Blend Credit Pull / App Taken Ingest] --> B[Stage: Automated Credit Review]
-                                B --> C[Micro-app: Credit Summary + Credit Worthy?]
-                                C -->|Yes| D[Stage: App Taken - Unengaged/Engaged Router]
-                                C -->|No| Z[Nurture Pipeline]
-
-                                D -->|Unengaged| E[Application Blast (if unassigned)]
-                                E --> F[Wait for Reply/Call]
-                                F -->|Engaged| G[Stage: App Taken - Engaged]
-
-                                G --> H[Wait for Docs Requested Event]
-                                H --> I[Stage: Borrower Docs Requested - Auto/Curated]
-                                I --> J[Timer: 24h nudge → 36h escalation → 2-day cadence]
-                                J -->|Docs uploaded| K[Stage: Borrower Docs Received]
-                                K --> L[Stage: Pending LO Pre-Approval Request]
-                                L --> M[LO Checklist Form Submitted]
-                                M --> N[Stage: Pre-Approval Review - Jason Work Assignment]
-                                N --> O[Jason Write-up Form Submitted]
-                                O -->|Approved| P[Post App - Pre-Approval Issued]
-                                O -->|Needs info| Q[Stage: Pre-Approval Wait - LO Work Assignment]
-                                Q --> L
-                                O -->|Declined| Z</div>
-                        </div>
+            <!-- Tab: QA -->
+            <div id="tab-qa" class="tab-content">
+                <div class="content-card">
+                    <h2 class="section-title">End-to-End QA Checklist</h2>
+                    <div id="qa-container">
+                        <!-- Populated by JS -->
                     </div>
-                </div>
-            </div>
-
-            <!-- Tab: Implementation -->
-            <div id="tab-implementation" class="tab-content">
-                <div class="checklist" id="implementation-checklist">
-                    <!-- Will be populated by JS -->
-                </div>
-            </div>
-
-            <!-- Tab: Tests -->
-            <div id="tab-tests" class="tab-content">
-                <div id="tests-container">
-                    <!-- Will be populated by JS -->
-                </div>
-            </div>
-
-            <!-- Tab: Open Items -->
-            <div id="tab-open-items" class="tab-content">
-                <div class="workflow-section-content">
-                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">These are configuration-dependent in
-                        GHL and should be decided once during implementation:</p>
-                    <ol style="padding-left: 1.5rem;">
-                        <li style="margin-bottom: 1rem;">
-                            <strong>Re-assigned deals pipeline location:</strong><br>
-                            Do you want re-assigned deals to move back into <strong>Unassigned</strong> pipeline, or
-                            stay in <strong>Assigned</strong> pipeline "Retargeted…"?
-                        </li>
-                        <li style="margin-bottom: 1rem;">
-                            <strong>What counts as "LO engaged":</strong><br>
-                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
-                                <li>Completion of SLA task?</li>
-                                <li>Outbound SMS logged?</li>
-                                <li>Transcript generated?</li>
-                            </ul>
-                            <em style="color: var(--text-secondary);">(This spec supports all; pick one primary.)</em>
-                        </li>
-                    </ol>
-                </div>
-            </div>
-
-            <!-- Tab: Gotchas -->
-            <div id="tab-gotchas" class="tab-content">
-                <div id="gotchas-container">
-                    <!-- Will be populated by JS -->
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
     <script>
-        mermaid.initialize({
-            startOnLoad: true,
-            theme: 'default',
-            securityLevel: 'loose',
-            suppressErrors: true,
-            themeVariables: {
-                primaryColor: '#ecf0f1',
-                primaryTextColor: '#2c3e50',
-                primaryBorderColor: '#bdc3c7',
-                lineColor: '#34495e',
-                secondaryColor: '#f8f9fa',
-                tertiaryColor: '#ffffff',
-                background: '#ffffff',
-                mainBkg: '#ffffff',
-                secondBkg: '#f8f9fa',
-                textColor: '#2c3e50',
-                border1: '#bdc3c7',
-                border2: '#ecf0f1',
-                arrowheadColor: '#3498db',
-                clusterBkg: '#f8f9fa',
-                clusterBorder: '#bdc3c7',
-                defaultLinkColor: '#34495e',
-                titleColor: '#2c3e50',
-                edgeLabelBackground: '#ffffff',
-                actorBorder: '#3498db',
-                actorBkg: '#ecf0f1',
-                actorTextColor: '#2c3e50',
-                actorLineColor: '#34495e',
-                signalColor: '#2c3e50',
-                signalTextColor: '#2c3e50',
-                labelBoxBkgColor: '#ffffff',
-                labelBoxBorderColor: '#bdc3c7',
-                labelTextColor: '#2c3e50',
-                loopTextColor: '#2c3e50',
-                noteBorderColor: '#bdc3c7',
-                noteBkgColor: '#f8f9fa',
-                noteTextColor: '#2c3e50',
-                activationBorderColor: '#3498db',
-                activationBkgColor: '#ecf0f1',
-                sequenceNumberColor: '#ffffff'
+        // --- RECONCILED DATA STRUCTURES ---
+
+        const pipelines = [
+            {
+                name: "A1: Pre‑Application — Unassigned",
+                purpose: "New/early leads not assigned to an LO. Blend monitoring runs here.",
+                stages: [
+                    "Unassigned - New",
+                    "Unassigned - New - No Response",
+                    "Unassigned - Responded - AI Engaged",
+                    "Unassigned - Application Started - Actively Completing",
+                    "Unassigned - Working on Application (Blend Monitoring)",
+                    "Unassigned - Engaged - Awaiting Assignment",
+                    "Spanish Speaking - No Response",
+                    "Spanish Speaking - AI Engaged/LO Call Transcript",
+                    "Not Interested",
+                    "Move to Post-App Queue App Taken",
+                    "DNC - Specific DNC Request"
+                ]
+            },
+            {
+                name: "A2: Pre‑Application — Assigned",
+                purpose: "Lead assigned to LO. SLA 30m gate enforces quick first touch.",
+                stages: [
+                    "SMS Engaged with AI",
+                    "SMS Engaged with LO",
+                    "Phone Engaged with LO",
+                    "Blend App Started - Unengaged",
+                    "Blend App Started - Engaged with AI",
+                    "Blend App Started - Engaged with LO",
+                    "Retargeted to New LO (Exclude Current Assignment)"
+                ]
+            },
+            {
+                name: "A3: Pre‑App — Not Working (Nurture)",
+                purpose: "Fallout bucket for pre-app leads.",
+                stages: [
+                    "Not Interested",
+                    "Went With Another Lender",
+                    "Process On Hold",
+                    "Engaged - Never Completed Application",
+                    "Credit Event - Seasoning Date",
+                    "Other / Review"
+                ]
+            },
+            {
+                name: "B1: Post‑App — Working — Not Yet Converted",
+                purpose: "App completed. Credit review, docs tracking, Jason review queue.",
+                stages: [
+                    "Automated Credit Review",
+                    "Application Taken - Unengaged",
+                    "Application Taken - Engaged",
+                    "Application Taken - Not from a Lead",
+                    "Credit Worthy? Yes - Request Documents / No - Nurture",
+                    "Borrower Docs Requested - Auto",
+                    "Borrower Docs Requested - Curated",
+                    "Borrower Docs Requested - Not received after 36 hours",
+                    "Borrower Docs Received",
+                    "Pending LO Pre-Approval Request",
+                    "Pre-Approval Requested",
+                    "Refinance Review Requested",
+                    "Pre-Approval Review - Jason Work Assignment",
+                    "Refinance Review - Jason Work Assignment",
+                    "Pre-Approval Wait - LO Work Assignment"
+                ]
+            },
+            {
+                name: "B2: Post‑App — Pre‑Approval Issued",
+                purpose: "Pre-approval issued. Borrower home shopping phase.",
+                stages: [
+                    "Needs a Realtor",
+                    "Actively Looking for Homes",
+                    "Potential Hostile Realtor",
+                    "Offers Placed",
+                    "Pre-Approved No Longer Active"
+                ]
+            },
+            {
+                name: "B3: Post‑App — Under Contract / Processing",
+                purpose: "RESPA triggered through closing. Final milestones.",
+                stages: [
+                    "RESPA Triggered - Refinance (Holding)",
+                    "RESPA Triggered - Not Pre-Approved (Alert)",
+                    "Under Contract - Needs Initial Disclosures",
+                    "Under Contract - Initial Disclosures Sent",
+                    "Under Contract - Initial Disclosures Signed",
+                    "Operations Submission - Jason Work Assignment",
+                    "Submitted to Operations",
+                    "In Processing",
+                    "Submitted to Underwriting",
+                    "In Underwriting",
+                    "UW Approval Issued",
+                    "Clear to Close",
+                    "Closed Funded"
+                ]
+            },
+            {
+                name: "C1: Post‑App — Not Working (Nurture)",
+                purpose: "Post-app fallout bucket.",
+                stages: [
+                    "Viable Loan - Docs Never Received",
+                    "Not Credit Worthy",
+                    "Long-Term Credit Drip",
+                    "Other / Review"
+                ]
+            },
+            {
+                name: "C2: Closed / Funded",
+                purpose: "Final milestone and post-close relationship management.",
+                stages: [
+                    "Closed Funded",
+                    "Post-Close Nurture"
+                ]
             }
+        ];
+
+        const tags = [
+            "Lang | Spanish", "Lang | Other", "DNC | All", "DNC | Specific",
+            "SLA | Gate Active", "SLA | Met", "CLAIM | Locked", "CLAIM | Won",
+            "PreApp | Not Working", "PostApp | Still Unengaged", "PostApp | Docs Requested",
+            "PostApp | Docs Received", "PostApp | Pending LO PreApproval", "PostApp | Jason Review Needed",
+            "PostApp | Waiting on LO", "PostApp | Not Credit Worthy", "PostApp | Not Working",
+            "BLEND | Inactive 45m", "Closed | Funded", "DOCS | Curated"
+        ];
+
+        const workflowGroups = [
+            {
+                name: "Blend Integration (Existing)",
+                items: [
+                    {
+                        id: "WF-BLEND-01",
+                        name: "Blend Ingest + Initial SMS",
+                        trigger: "Blend Inbound Webhook",
+                        summary: "Syncs contact info from Blend and sets 'CF - Blend Lead ID' and 'CF - Blend Application ID'. Moves the opportunity to 'Unassigned - New' and kicks off the 'WF-BLEND-02' monitoring loop.",
+                        technical: 'Trigger: Incoming webhook from Blend.\n\nRequirements:\n1) Upsert contact by phone/email.\n2) Set fields: "CF - Blend Lead ID", "CF - Blend Application ID".\n3) Move Opp to "Pre-App Unassigned" -> "Unassigned - New".\n4) Send initial SMS acknowledgment.\n5) Enroll in "WF-BLEND-02".'
+                    },
+                    {
+                        id: "WF-BLEND-02",
+                        name: "Blend Monitoring Loop",
+                        trigger: "Stage: Blend Monitoring",
+                        summary: "A 5-minute loop checking Blend status via middleware. Updates 'CF - Blend Last Activity At', 'CF - Blend SSN Entered', and 'CF - Blend DOB Entered'. Transitions to Post-App upon completion.",
+                        technical: 'Trigger: Stage changes to "Unassigned - Working on Application (Blend Monitoring)".\n\nSteps:\n1) Wait 5 minutes.\n2) Webhook to middleware to fetch status.\n3) Update "CF - Blend Last Activity At", "CF - Blend SSN Entered", "CF - Blend DOB Entered".\n4) If complete: Move to "Move to Post-App Queue App Taken" and trigger "WF-POST-01".\n5) If 45m inactive: trigger "WF-BLEND-03".'
+                    },
+                    {
+                        id: "WF-BLEND-03",
+                        name: "Inactivity Escalation (Call Blast)",
+                        trigger: "Inactivity 45m Tag/Field",
+                        summary: "Triggered if 'CF - Blend Last Activity At' > 45 minutes. Adds tag 'BLEND | Inactive 45m', moves to 'Unassigned - New - No Response', and starts a call blast to the LO team.",
+                        technical: 'Trigger: CF - Blend Last Activity At > 45m OR tag "BLEND | Inactive 45m".\n\nActions:\n1) Move Opp to "Unassigned - New - No Response".\n2) Start Internal Call Blast to LO User Group.\n3) Send "Need help?" SMS to borrower.'
+                    },
+                    {
+                        id: "WF-CONC-01",
+                        name: "Concurrency Monitor",
+                        trigger: "Duplicate Events",
+                        summary: "Prevents race conditions by checking 'CF - Blend Lead ID'. Ensures only one instance of ingest or monitoring runs per unique lead ID. Essential for webhook stability.",
+                        technical: 'Logic:\n1) On webhook: check if instance is already running for "CF - Blend Lead ID".\n2) Use "Allow Multiple: No" or Tag-based locking.\n3) Prevent duplicate Stage moves or duplicate SMS.'
+                    }
+                ]
+            },
+            {
+                name: "Claim & Assignment (Existing)",
+                items: [
+                    {
+                        id: "WF-CLAIM-01",
+                        name: "Application Blast (Notify all LOs)",
+                        trigger: "Stage: Awaiting Assignment",
+                        summary: "Sends internal notifications to all LOs. Sets 'SLA | Gate Active' tag and 'CF - LO First Touch Completed' = false. Includes lead claim link for 'WF-CLAIM-02'.",
+                        technical: 'Trigger: Opp entering "Unassigned - Engaged - Awaiting Assignment".\n\nActions:\n1) Add tag "SLA | Gate Active".\n2) Set "CF - LO First Touch Completed" = false.\n3) Internal notification (SMS/Email) to all LOs with link to Claim Form.'
+                    },
+                    {
+                        id: "WF-CLAIM-02",
+                        name: "Claim Processor (First-Wins)",
+                        trigger: "Form: LO Lead Claim",
+                        summary: "Locks the lead to the first responding LO. Adds 'CLAIM | Locked' and 'CLAIM | Won' tags. Stamps 'CF - Assigned LO User ID' and 'CF - LO Claim Timestamp'.",
+                        technical: 'Trigger: LO Lead Claim Form submission.\n\nLogic:\n- If "CLAIM | Locked" tag exists: Exit.\n- Else:\n  1) Add "CLAIM | Locked" and "CLAIM | Won".\n  2) Assign Opp owner to user.\n  3) Stamp "CF - Assigned LO User ID", "CF - Assigned LO Name", "CF - LO Claim Timestamp".\n  4) Move to Assigned pipeline.'
+                    },
+                    {
+                        id: "WF-GATE-01",
+                        name: "SLA First Touch Gate (30 min)",
+                        trigger: "Tag: SLA | Gate Active",
+                        summary: "Wait 30 minutes from 'SLA | Gate Active'. If 'CF - LO First Touch Completed' is still false, it alerts Jason and triggers a re-blast (WF-CLAIM-01).",
+                        technical: 'Trigger: Tag "SLA | Gate Active" added.\n\nSteps:\n1) Wait 30 minutes.\n2) If "CF - LO First Touch Completed" is false:\n   - Notify Jason.\n   - Trigger re-assignment / re-blast (WF-CLAIM-01).\n3) Else: Add tag "SLA | Met".'
+                    },
+                    {
+                        id: "WF-GATE-02",
+                        name: "SLA Engagement Listener",
+                        trigger: "Touch Completed (Link/Task)",
+                        summary: "Listens for contact touch. Updates 'CF - LO First Touch Completed' = true and 'CF - LO First Touch At'. Moves stage to 'Engaged' and adds 'SLA | Met' tag.",
+                        technical: 'Trigger: Trigger Link click OR Call Task completed.\n\nActions:\n1) Set "CF - LO First Touch Completed" = true.\n2) Set "CF - LO First Touch At" = now.\n3) Remove "SLA | Gate Active", add "SLA | Met".\n4) Move stage to "Engaged".'
+                    }
+                ]
+            },
+            {
+                name: "* Post-App (Ingest & Routing) (Existing)",
+                items: [
+                    {
+                        id: "WF-POST-01",
+                        name: "Post-App Ingest + Credit",
+                        trigger: "App Completed / Credit Pulled",
+                        summary: "Moves opportunity to Post-App pipeline. Automatically triggers 'WF-POST-02' for credit decisioning using 'CF - Blend Application ID'.",
+                        technical: 'Trigger: Blend event "Application Completed".\n\nActions:\n1) Move Opp to "Post-App Working" pipeline.\n2) Move stage to "Automated Credit Review".\n3) Enroll in "WF-POST-02".'
+                    },
+                    {
+                        id: "WF-POST-02",
+                        name: "Credit Review Micro-App",
+                        trigger: "Stage: Auto Credit Review",
+                        summary: "Webhook to DecisionAI. Receives credit status and stores in 'CF - Credit Worthy' (Yes/No) and 'CF - Credit Summary'. If 'No', moves to Nurture pipeline.",
+                        technical: 'Trigger: Opp Entering "Automated Credit Review".\n\nLogic:\n1) Webhook call to credit micro-app.\n2) Update fields "CF - Credit Worthy", "CF - Credit Summary".\n3) If "CF - Credit Worthy" == No -> Move to Post-App Nurture.'
+                    },
+                    {
+                        id: "WF-POST-03",
+                        name: "App Taken Router",
+                        trigger: "Credit Review Finished",
+                        summary: "Checks assignment status post-credit. If unassigned, triggers 'WF-CLAIM-01'. Adds 'PostApp | Still Unengaged' tag if no contact touch recorded.",
+                        technical: 'Logic:\n1) If Owner is empty -> Trigger "WF-CLAIM-01".\n2) If "CF - LO First Touch Completed" is false: add tag "PostApp | Still Unengaged".\n3) Else: Move stage to "Application Taken - Engaged".'
+                    }
+                ]
+            },
+            {
+                name: "* Post-App (Docs Tracking) (Existing)",
+                items: [
+                    {
+                        id: "WF-POST-04",
+                        name: "Docs Requested Handler",
+                        trigger: "Blend: Docs Requested",
+                        summary: "Reacts to Blend doc requests. Stamps 'CF - Borrower Docs Requested At', updates request type, and adds 'PostApp | Docs Requested' tag. Starts 'WF-POST-05' reminders.",
+                        technical: 'Trigger: Blend event "Docs Requested".\n\nActions:\n1) Set "CF - Borrower Docs Requested At" = now.\n2) Update "CF - Borrower Docs Request Type".\n3) Add tag "PostApp | Docs Requested".\n4) Add to "WF-POST-05".'
+                    },
+                    {
+                        id: "WF-POST-05",
+                        name: "Docs Reminder Cadence",
+                        trigger: "Stage: Docs Requested",
+                        summary: "Sends borrower reminders at 24h (SMS) and 36h (LO Alert + SMS). Stops once 'PostApp | Docs Received' tag is detected or stage changes.",
+                        technical: 'Trigger: Presence of "PostApp | Docs Requested" tag.\n\nCadence:\n1) Wait 24h: SMS to Borrower.\n2) Wait 12h: SMS to Borrower + Internal Alert to LO.\n3) Loop every 48h until "PostApp | Docs Received" or stage move.'
+                    },
+                    {
+                        id: "WF-POST-06",
+                        name: "Docs Received Handler",
+                        trigger: "Blend: Docs Received",
+                        summary: "When Blend docs are uploaded, it stamps 'CF - Borrower Docs Received At', adds 'PostApp | Docs Received' tag, and moves lead to LO Checklist stage.",
+                        technical: 'Trigger: Blend event "Docs Received".\n\nActions:\n1) Set "CF - Borrower Docs Received At" = now.\n2) Add tag "PostApp | Docs Received", remove "PostApp | Docs Requested".\n3) Move stage to "Borrower Docs Received".\n4) Notify LO to complete Pre-App Checklist.'
+                    }
+                ]
+            },
+            {
+                name: "* Post-App (Pre-Approval) (Existing)",
+                items: [
+                    {
+                        id: "WF-POST-07",
+                        name: "LO Pre-Approval Request Form",
+                        trigger: "Form: LO Pre-App Checklist",
+                        summary: "Processes the LO checklist. Sets 'CF - LO Pre-Approval Request Completed' = true and moves to Jason's queue with tag 'PostApp | Jason Review Needed'.",
+                        technical: 'Trigger: LO Pre-App Checklist Form submitted.\n\nActions:\n1) Set "CF - LO Pre-Approval Request Completed" = true.\n2) Set "CF - LO Pre-Approval Request At" = now.\n3) Add tag "PostApp | Jason Review Needed".\n4) Move stage to "Pre-Approval Requested".'
+                    },
+                    {
+                        id: "WF-POST-08",
+                        name: "Jason Review Write-Up",
+                        trigger: "Form: Jason Review",
+                        summary: "Updates 'CF - Jason Decision' and 'CF - Jason Review Write-Up'. If 'Approved', triggers 'WF-PAI-01'. If Jason needs info, starts 'WF-POST-09' LO wait loop.",
+                        technical: 'Trigger: Jason Review Form submitted.\n\nLogic:\n1) Update "CF - Jason Decision", "CF - Jason Review Write-Up".\n2) If Decision == Approved: Move to PAI issued pipeline.\n3) If Decision == More Info: Move to LO Wait stage, enroll in "WF-POST-09".'
+                    },
+                    {
+                        id: "WF-POST-09",
+                        name: "Pre-Approval Wait Loop",
+                        trigger: "Stage: Wait for LO",
+                        summary: "Notifies LO every 48 hours of items Jason needs from 'CF - Jason Review Write-Up'. Continues until LO resubmits the Pre-App Checklist form.",
+                        technical: 'Trigger: Stage "Pre-Approval Wait - LO Work Assignment".\n\nSteps:\n1) Wait 48h.\n2) Send internal notification to LO with content of "CF - Jason Review Write-Up".\n3) Loop until checklist form is re-submitted.'
+                    }
+                ]
+            },
+            {
+                name: "(NEW BUILD) * Post-App (PAI & Looking)",
+                items: [
+                    {
+                        id: "WF-PAI-01",
+                        name: "Pre-Approval Issued Router",
+                        trigger: "Jason Decision: Approved",
+                        summary: "Routes lead to 'Needs a Realtor' or 'Actively Looking' based on 'CF - Realtor Name'. Notifies the LO and includes Congrats SMS to borrower.",
+                        technical: 'Trigger: CF - Jason Decision set to "Approved".\n\nActions:\n1) Move to "Pre-Approval Issued" pipeline.\n2) Conditional: If "CF - Realtor Name" is empty -> "Needs a Realtor" stage.\n3) Else: "Actively Looking for Homes" stage.\n4) Send borrower "Congrats on Pre-Approval" SMS.'
+                    },
+                    {
+                        id: "WF-PAI-02",
+                        name: "Realtor Added Listener",
+                        trigger: "Field: Realtor Non-Empty",
+                        summary: "Watches for LO to fill in 'CF - Realtor Name'. Automatically advances the opportunity to 'Actively Looking' and notifies the LO that tracking is active.",
+                        technical: 'Trigger: "CF - Realtor Name" changes and is not empty.\n\nActions:\n1) Move Opp stage to "Actively Looking for Homes".\n2) Notify LO of stage advancement.'
+                    }
+                ]
+            },
+            {
+                name: "(NEW BUILD) * Post-App (Under Contract & Ops)",
+                items: [
+                    {
+                        id: "WF-UC-01",
+                        name: "RESPA Trigger Router",
+                        trigger: "Blend: RESPA Triggered",
+                        summary: "Detected via property address entry in Blend. Sets 'CF - RESPA Triggered' and 'CF - Property Address'. Routes Purchases to Initial Disclosures and Refis to Holding.",
+                        technical: 'Trigger: Blend event "RESPA Triggered".\n\nActions:\n1) Set "CF - RESPA Triggered" = true.\n2) Set "CF - Property Address" from webhook.\n3) Route by loan type: Purchase -> "Needs Initial Disclosures"; Refi -> "RESPA Triggered - Refinance (Holding)".'
+                    },
+                    {
+                        id: "WF-UC-02",
+                        name: "Disclosures Sent Sync",
+                        trigger: "Blend: Disclosures Sent",
+                        summary: "Stamps 'CF - Initial Disclosures Sent At' and moves lead to 'Under Contract - Initial Disclosures Sent'. Alerts the LO that borrower action is needed.",
+                        technical: 'Trigger: Blend event "Initial Disclosures Sent".\n\nActions:\n1) Set "CF - Initial Disclosures Sent At" = now.\n2) Move stage to "Under Contract - Initial Disclosures Sent".\n3) Notify LO.'
+                    },
+                    {
+                        id: "WF-UC-03",
+                        name: "Disclosures Signed Sync",
+                        trigger: "Blend: Disclosures Signed",
+                        summary: "Stamps 'CF - Initial Disclosures Signed At' and advances stage to 'Disclosures Signed'. Prompts the LO to submit the 'Ops Submission Form' to trigger 'WF-UC-04'.",
+                        technical: 'Trigger: Blend event "Initial Disclosures Signed".\n\nActions:\n1) Set "CF - Initial Disclosures Signed At" = now.\n2) Move stage to "Under Contract - Initial Disclosures Signed".\n3) Notify LO to complete Ops Submission Form.'
+                    },
+                    {
+                        id: "WF-UC-04",
+                        name: "Ops Submission Form Handler",
+                        trigger: "Form: Ops Submission",
+                        summary: "Processes the Ops form, adds 'PostApp | Jason Review Needed' tag, and moves opportunity to Jason's work queue for final submission approval.",
+                        technical: 'Trigger: Ops Submission Request Form submitted.\n\nActions:\n1) Add tag "PostApp | Jason Review Needed".\n2) Move stage to "Operations Submission - Jason Work Assignment".\n3) Notify Jason.'
+                    },
+                    {
+                        id: "WF-UC-05",
+                        name: "Jason Approval -> Ops",
+                        trigger: "Jason Ops Decision",
+                        summary: "Triggered when Jason approves ops submission. Removes 'PostApp | Jason Review Needed' tag, moves lead to 'Submitted to Operations', and notifies the LO.",
+                        technical: 'Trigger: Jason Decision on Ops Submission.\n\nActions:\n1) Move Opp to "Submitted to Operations".\n2) Remove "PostApp | Jason Review Needed" tag.\n3) Notify LO.'
+                    },
+                    {
+                        id: "WF-UC-06",
+                        name: "Milestone Stage Sync",
+                        trigger: "Blend Milestones",
+                        summary: "Automated stage sync for: In Processing, Submitted to Underwriting, In Underwriting, UW Approval Issued, and Clear to Close. Keeps GHL perfectly in sync with Blend.",
+                        technical: 'Trigger: Blend milestone events (Processing, UW, Approval, CTC).\n\nLogic:\nMap "Processing" -> "In Processing"; "Underwriting" -> "In Underwriting"; etc.'
+                    },
+                    {
+                        id: "WF-UC-07",
+                        name: "Closed Funded -> Congrats",
+                        trigger: "Blend: Closed Funded",
+                        summary: "Fires once loan is funded. Adds 'Closed | Funded' tag, moves to final pipeline stage, and sends automated congrats to both Borrower and Realtor.",
+                        technical: 'Trigger: Blend event "Closed Funded".\n\nActions:\n1) Add tag "Closed | Funded".\n2) Move Opp stage to "Closed Funded".\n3) Send Congrats SMS/Email to Borrower and Realtor.'
+                    }
+                ]
+            },
+            {
+                name: "* Utility & Other (Existing)",
+                items: [
+                    {
+                        id: "WF-LEAD-01",
+                        name: "Lead Intake V2 (Non-Blend)",
+                        trigger: "Zillow/MRC/etc Webhook",
+                        summary: "Handles non-Blend lead sources. Moves to 'Unassigned - New' and handles 'Lang | Spanish' tag and routing logic automatically.",
+                        technical: 'Trigger: Non-Blend lead source webhook.\n\nActions:\n1) Create Opp in "Unassigned - New".\n2) If Spanish: Add tag "Lang | Spanish", move to Spanish stage.\n3) Send initial "Lead Received" SMS.'
+                    },
+                    {
+                        id: "WF-ROUTE-01",
+                        name: "Language Routing",
+                        trigger: "Language Field/Reply",
+                        summary: "Checks 'CF - Preferred Language' or chat replies. Adds 'Lang | Spanish' or 'Lang | Other' tags to segment lead for bilingual LO assistance.",
+                        technical: 'Logic:\n1) Check contact reply for Spanish keywords.\n2) If Spanish detected: Add "Lang | Spanish" tag, move stage, and alert Team.'
+                    },
+                    {
+                        id: "WF-UTIL-01",
+                        name: "DNC / STOP Handler",
+                        trigger: "Inbound DNC / DND",
+                        summary: "Safety switch. If borrower replies 'STOP', it adds 'DNC | All' tag, moves Opp to DNC stage, and kills all active messaging workflows immediately.",
+                        technical: 'Trigger: Inbound STOP message.\n\nActions:\n1) Add tag "DNC | All".\n2) Move Opp to "DNC - Specific DNC Request".\n3) Stop all messaging automations.'
+                    },
+                    {
+                        id: "WF-UTIL-02",
+                        name: "Manual Stage Override Router",
+                        trigger: "Field: Manual Override",
+                        summary: "Failsafe for LOs. When 'CF - Manual Stage Override' is set, it force-moves the Opp to the chosen stage, logs a note, and clears the field to reset.",
+                        technical: 'Trigger: CF - Manual Stage Override updated.\n\nLogic:\n1) Use Switch/If case based on field value.\n2) Move Opp to matching stage.\n3) Clear the field to allow future overrides.'
+                    },
+                    {
+                        id: "WF-NUR-PRE-01",
+                        name: "Pre-App Nurture Router",
+                        trigger: "Pre-App Fallout",
+                        summary: "Moves pre-app fallout leads to nurture pipeline. Adds 'PreApp | Not Working' tag to ensure no assignment alerts fire while in nurture.",
+                        technical: 'Trigger: Fallout status set in Pre-App.\n\nActions:\n1) Move to "Pre-App - Not Working" pipeline.\n2) Add tag "PreApp | Not Working".'
+                    },
+                    {
+                        id: "WF-NUR-POST-01",
+                        name: "Post-App Nurture Router",
+                        trigger: "Post-App Fallout",
+                        summary: "Moves post-app fallout leads to nurture pipeline. Adds 'PostApp | Not Working' tag to stop doc reminders and LO assignment alerts.",
+                        technical: 'Trigger: Fallout status set in Post-App.\n\nActions:\n1) Move to "Post-App - Not Working" pipeline.\n2) Add "PostApp | Not Working" tag.'
+                    },
+                    {
+                        id: "WF-NUR-02",
+                        name: "Credit Seasoning Scheduler",
+                        trigger: "Field: Seasoning Date Set",
+                        summary: "Calculates follow-up timing from 'CF - Credit Seasoning Date'. Schedules LO tasks for future re-engagement once the credit event has seasoned.",
+                        technical: 'Trigger: "CF - Credit Seasoning Date" is populated.\n\nActions:\n1) Calculate task date based on seasonings rules.\n2) Set internal reminder task for LO owner.'
+                    }
+                ]
+            }
+        ];
+
+        const customFields = [
+            {
+                cat: "Blend Identifiers",
+                fields: [
+                    { name: "CF - Blend Lead ID", type: "Single Line", folder: "Blend Details", object: "Contact", purpose: "Unique GUID from Blend webhook." },
+                    { name: "CF - Blend Application ID", type: "Single Line", folder: "Blend Details", object: "Contact", purpose: "Application ID for deep linking." },
+                    { name: "CF - Blend Last Activity At", type: "Date Picker", folder: "Blend Details", object: "Contact", purpose: "Timestamp of last webhook ping." },
+                    { name: "CF - Preferred Language", type: "Dropdown (Single)", folder: "Blend Details", object: "Contact", options: ["English", "Spanish", "Other"], purpose: "Initial language choice in Blend app." },
+                    { name: "CF - Blend SSN Entered", type: "Checkbox", folder: "Blend Details", object: "Contact", purpose: "True if borrower entered SSN." },
+                    { name: "CF - Blend DOB Entered", type: "Checkbox", folder: "Blend Details", object: "Contact", purpose: "True if borrower entered DOB." }
+                ]
+            },
+            {
+                cat: "Assignment & SLA",
+                fields: [
+                    { name: "CF - Assigned LO User ID", type: "Single Line", folder: "Internal Routing", object: "Contact", purpose: "GHL User ID of the claiming LO." },
+                    { name: "CF - Assigned LO Name", type: "Single Line", folder: "Internal Routing", object: "Contact", purpose: "Full name of claiming LO for SMS." },
+                    { name: "CF - LO Claim Timestamp", type: "Date Picker", folder: "Internal Routing", object: "Contact", purpose: "When the LO hit the 'Won' button." },
+                    { name: "CF - LO First Touch Completed", type: "Checkbox", folder: "Internal Routing", object: "Contact", purpose: "Controlled by WF-GATE-02." },
+                    { name: "CF - LO First Touch At", type: "Date Picker", folder: "Internal Routing", object: "Contact", purpose: "Timestamp of first SMS/Call." }
+                ]
+            },
+            {
+                cat: "Post-App & Credit",
+                fields: [
+                    { name: "CF - Credit Worthy", type: "Dropdown (Single)", folder: "Credit Review", object: "Contact", options: ["Yes", "No", "Manual Review"], purpose: "Response from credit micro-app." },
+                    { name: "CF - Credit Summary", type: "Multi Line", folder: "Credit Review", object: "Contact", purpose: "Detailed notes from micro-app." },
+                    { name: "CF - Borrower Docs Requested At", type: "Date Picker", folder: "Docs Tracking", object: "Contact", purpose: "Timestamp of first doc request." },
+                    { name: "CF - Borrower Docs Request Type", type: "Single Line", folder: "Docs Tracking", object: "Contact", purpose: "Category of docs (Stubs, Tax, etc)." },
+                    { name: "CF - Borrower Docs Received At", type: "Date Picker", folder: "Docs Tracking", object: "Contact", purpose: "Timestamp of last upload." }
+                ]
+            },
+            {
+                cat: "Jason Review Queue",
+                fields: [
+                    { name: "CF - LO Pre-Approval Request Completed", type: "Checkbox", folder: "Jason Review", object: "Contact", purpose: "Submitted by LO Checklist form." },
+                    { name: "CF - LO Pre-Approval Request At", type: "Date Picker", folder: "Jason Review", object: "Contact", purpose: "Timestamp of LO submission." },
+                    { name: "CF - Jason Decision", type: "Dropdown (Single)", folder: "Jason Review", object: "Contact", options: ["Approved", "More Info Needed", "Declined"], purpose: "Jason's final arbiter choice." },
+                    { name: "CF - Jason Review Write-Up", type: "Multi Line", folder: "Jason Review", object: "Contact", purpose: "Jason's feedback for the LO." },
+                    { name: "CF - Jason Review At", type: "Date Picker", folder: "Jason Review", object: "Contact", purpose: "Timestamp of Jason's submission." }
+                ]
+            },
+            {
+                cat: "Realtor Details",
+                fields: [
+                    { name: "CF - Realtor Name", type: "Single Line", folder: "Property/Realtor", object: "Contact", purpose: "External Realtor info." },
+                    { name: "CF - Realtor Phone", type: "Phone", folder: "Property/Realtor", object: "Contact", purpose: "E.164 formatted phone." },
+                    { name: "CF - Realtor Email", type: "Single Line", folder: "Property/Realtor", object: "Contact", purpose: "Realtor contact email." },
+                    { name: "CF - Hostile Realtor Flag", type: "Checkbox", folder: "Property/Realtor", object: "Contact", purpose: "Toggles hostile messaging paths." },
+                    { name: "CF - Offers Placed Flag", type: "Checkbox", folder: "Property/Realtor", object: "Contact", purpose: "Tracks shopping intensity." }
+                ]
+            },
+            {
+                cat: "UC / RESPA Trigger",
+                fields: [
+                    { name: "CF - Loan Purpose", type: "Dropdown (Single)", folder: "Loan Details", object: "Contact", options: ["Purchase", "Refinance"], purpose: "Determines RESPA routing." },
+                    { name: "CF - Property Address", type: "Multi Line", folder: "Loan Details", object: "Contact", purpose: "The triggered RESPA address." },
+                    { name: "CF - RESPA Triggered", type: "Checkbox", folder: "Loan Details", object: "Contact", purpose: "True once address is logged in Blend." },
+                    { name: "CF - Initial Disclosures Sent At", type: "Date Picker", folder: "Loan Details", object: "Contact", purpose: "Timestamp from Blend." },
+                    { name: "CF - Initial Disclosures Signed At", type: "Date Picker", folder: "Loan Details", object: "Contact", purpose: "Timestamp from Blend." }
+                ]
+            },
+            {
+                cat: "Override & Tracking",
+                fields: [
+                    { name: "CF - Manual Stage Override", type: "Dropdown (Single)", folder: "Utility/Admin", object: "Contact", options: ["Force Move: Ingest", "Force Move: Claim", "Force Move: PAI", "Force Move: UC"], purpose: "Failsafe LO control." },
+                    { name: "CF - Not Working Reason", type: "Multi Line", folder: "Utility/Admin", object: "Contact", purpose: "Reason for fallout pipeline." },
+                    { name: "CF - Credit Seasoning Date", type: "Date Picker", folder: "Utility/Admin", object: "Contact", purpose: "Target date for credit re-pull." }
+                ]
+            }
+        ];
+
+        const qaItems = [
+            "Blend user created → opp created in Pre-App Unassigned",
+            "Monitoring loop updates activity fields and detects completion",
+            "Inactivity 45m triggers call blast escalation",
+            "Claim blast fires to all LOs with lead context link",
+            "Claim processor enforces first-wins lock (CLAIM | Locked)",
+            "SLA gate reassigns after 30 min if no engagement",
+            "Engagement listener marks first touch complete + updates stage",
+            "App complete → automated credit review runs via webhook",
+            "Docs requested triggered → timer cadence starts",
+            "Docs received → pending LO pre-approval request queue",
+            "LO checklist submission → Jason work assignment queue",
+            "Jason review approved → Pre-Approval Issued pipeline",
+            "RESPA triggered → UC pipeline routing (Refi vs Purchase)",
+            "Disclosures signed → Ops submission form request",
+            "Jason approval move to Submitted to Ops",
+            "Manual override clears field and logs note after move"
+        ];
+
+        // --- RENDER LOGIC ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPipelines();
+            renderSetup();
+            renderWorkflows();
+            renderQA();
+            loadProgress();
+            updateOverallProgress();
+            mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
         });
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function renderPipelines() {
+            const container = document.getElementById('pipelines-container');
+            if (!container) return;
+            container.innerHTML = '';
+            pipelines.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.innerHTML = `
+                    <h3 style="margin-bottom: 0.5rem; font-size: 1.15rem;">${p.name}</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">${p.purpose}</p>
+                    <div style="background: var(--bg-light); border-radius: 8px; padding: 1rem;">
+                        <ul class="stage-list">
+                            ${p.stages.map((s, i) => `
+                                <li class="stage-item">
+                                    <span class="stage-index">${i + 1}</span>
+                                    <span>${s}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderSetup() {
+            const tagContainer = document.getElementById('tags-container');
+            if (!tagContainer) return;
+            tagContainer.innerHTML = '';
+            tags.forEach(t => {
+                const id = `tag-${t.replace(/[\| ]/g, '-').toLowerCase()}`;
+                tagContainer.innerHTML += `
+                    <div class="checklist-item" data-id="${id}">
+                        <input type="checkbox" onchange="toggleItem('${id}', this.checked)">
+                        <div class="checklist-content">
+                            <div class="checklist-title">${t}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const fieldContainer = document.getElementById('fields-container');
+            if (!fieldContainer) return;
+            fieldContainer.innerHTML = '';
+            customFields.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'content-card';
+                card.innerHTML = `
+                    <h3 style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent); padding-left: 0.75rem;">${c.cat}</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: var(--bg-light); text-align: left;">
+                                    <th style="padding: 0.75rem; border-bottom: 2px solid var(--border); width: 40px;"></th>
+                                    <th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Field Name</th>
+                                    <th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Object</th>
+                                    <th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Type</th>
+                                    <th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Folder / Group</th>
+                                    <th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Details / Options</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${c.fields.map(f => {
+                    const id = `field-${f.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+                    const optionsText = f.options ? `<strong>Options:</strong> ${f.options.join(', ')}<br>` : '';
+                    return `
+                                        <tr style="border-bottom: 1px solid var(--border);" data-id="${id}">
+                                            <td style="padding: 0.75rem; text-align: center;">
+                                                <input type="checkbox" onchange="toggleItem('${id}', this.checked)" style="width: 16px; height: 16px;">
+                                            </td>
+                                            <td style="padding: 0.75rem; font-weight: 600; color: var(--primary);">${f.name}</td>
+                                            <td style="padding: 0.75rem; color: var(--text-secondary);">${f.object}</td>
+                                            <td style="padding: 0.75rem;"><span class="workflow-id-pill" style="background: var(--primary-light); color: white; border: none;">${f.type}</span></td>
+                                            <td style="padding: 0.75rem; color: var(--text-secondary);">${f.folder}</td>
+                                            <td style="padding: 0.75rem; line-height: 1.4;">
+                                                ${optionsText}
+                                                <span style="font-size: 0.85rem; color: var(--text-secondary);">${f.purpose}</span>
+                                            </td>
+                                        </tr>
+                                    `;
+                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                fieldContainer.appendChild(card);
+            });
+        }
+        function renderWorkflows() {
+            const container = document.getElementById('workflows-container');
+            if (!container) return;
+            container.innerHTML = '';
+            workflowGroups.forEach(g => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'workflow-group';
+                groupDiv.innerHTML = `<div class="workflow-group-title">${g.name}</div>`;
+
+                g.items.forEach(wf => {
+                    const card = document.createElement('div');
+                    card.className = 'workflow-card';
+                    card.setAttribute('data-id', wf.id);
+                    card.innerHTML = `
+                        <div class="workflow-header" onclick="this.parentElement.classList.toggle('active')">
+                            <input type="checkbox" onclick="event.stopPropagation(); toggleItem('${wf.id}', this.checked)">
+                            <span class="workflow-id-pill">${wf.id}</span>
+                            <h3>${wf.name}</h3>
+                        </div>
+                        <div class="workflow-content">
+                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div><strong>Trigger:</strong> ${wf.trigger}</div>
+                                <div style="font-size: 0.8rem; background: var(--bg-light); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--border);">
+                                    📂 Folder: <strong>${g.name.split('(')[0].trim()}</strong>
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                                <div>
+                                    <div style="font-weight: 700; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; color: var(--primary);">
+                                        📝 Plain Language Summary
+                                    </div>
+                                    <div class="workflow-spec-box" style="background: var(--bg-light); color: var(--text); border-color: var(--border); font-family: inherit; height: 180px; overflow-y: auto;">
+                                        ${wf.summary}
+                                        <button class="copy-btn" onclick="copyText('${wf.id}-summary')" style="position: absolute; top: 0.5rem; right: 0.5rem;">Copy Summary</button>
+                                        <textarea id="${wf.id}-summary" style="display:none">${wf.summary}</textarea>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent);">
+                                        🤖 Technical AI Prompt
+                                    </div>
+                                    <div class="workflow-spec-box" style="height: 180px; overflow-y: auto;">
+                                        ${wf.technical}
+                                        <button class="copy-btn" onclick="copyText('${wf.id}-tech')" style="position: absolute; top: 0.5rem; right: 0.5rem;">Copy Prompt</button>
+                                        <textarea id="${wf.id}-tech" style="display:none">${wf.technical}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    groupDiv.appendChild(card);
+                });
+                container.appendChild(groupDiv);
+            });
+        }
+
+        function copyText(id) {
+            const text = document.getElementById(id).value;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const original = btn.innerText;
+                btn.innerText = 'Copied!';
+                btn.style.background = 'var(--success)';
+                setTimeout(() => {
+                    btn.innerText = original;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        }
+
+        function renderQA() {
+            const container = document.getElementById('qa-container');
+            if (!container) return;
+            container.innerHTML = '';
+            qaItems.forEach((item, i) => {
+                const id = `qa-${i}`;
+                container.innerHTML += `
+                    <div class="checklist-item" data-id="${id}">
+                        <input type="checkbox" onchange="toggleItem('${id}', this.checked)">
+                        <div class="checklist-content">
+                            <div class="checklist-title">${item}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleItem(id, completed) {
+            const item = document.querySelector(`[data-id="${id}"]`);
+            if (item) {
+                if (completed) item.classList.add('completed');
+                else item.classList.remove('completed');
+            }
+            localStorage.setItem(`aim-master-${id}`, completed);
+            updateOverallProgress();
+        }
+
+        function loadProgress() {
+            document.querySelectorAll('[data-id]').forEach(item => {
+                const id = item.getAttribute('data-id');
+                const saved = localStorage.getItem(`aim-master-${id}`);
+                if (saved === 'true') {
+                    const cb = item.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = true;
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        function updateOverallProgress() {
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            const checked = Array.from(allCheckboxes).filter(cb => cb.checked).length;
+            const total = allCheckboxes.length;
+            const pct = total === 0 ? 0 : Math.round((checked / total) * 100);
+
+            document.getElementById('progress-fill').style.width = `${pct}%`;
+            document.getElementById('progress-text').textContent = `${pct}% Complete (${checked} / ${total} items)`;
+
+            const badge = document.getElementById('overall-status-badge');
+            if (checked === total && total > 0) {
+                badge.textContent = "Finished";
+                badge.style.background = "var(--success)";
+            } else if (checked > 0) {
+                badge.textContent = "In Progress";
+                badge.style.background = "var(--accent)";
+            } else {
+                badge.textContent = "Awaiting Build";
+                badge.style.background = "var(--warning)";
+            }
+        }
+
+        function resetProgress() {
+            if (confirm("Reset all construction progress markers? This cannot be undone.")) {
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('aim-master-')) localStorage.removeItem(key);
+                });
+                window.location.reload();
+            }
+        }
     </script>
 </body>
 
